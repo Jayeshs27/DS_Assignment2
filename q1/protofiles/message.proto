@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package message;
+
+option go_package = "q1/protofiles";
+
+service BackendService {
+    rpc BackendRPC (BackendRequest) returns (BackendResponse);
+}
+
+service LoadBalancingService{
+    rpc LoadBalancerRPC (LoadBalancerRequest) returns (LoadBalancerResponse);
+}
+
+message BackendRequest {
+    int64 load = 1;
+}
+
+message BackendResponse {
+    string feedback = 1;
+}
+
+message LoadBalancerRequest {
+    int64 load = 1;
+}
+
+message LoadBalancerResponse {
+    string bestServer = 1;
+}
+
