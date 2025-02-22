@@ -8,20 +8,32 @@ service BackendService {
     rpc BackendRPC (BackendRequest) returns (BackendResponse);
 }
 
-service LoadBalancingService{
+service LoadBalancingService {
     rpc LoadBalancerRPC (LoadBalancerRequest) returns (LoadBalancerResponse);
 }
 
+service ReportLoadService {
+    rpc ReportLoadRPC (LoadStatus) returns (Empty);
+}
+
+message LoadStatus {
+    string serverAddr = 1;
+    float load = 2;
+}
+
+message Empty {}
+
 message BackendRequest {
-    int64 load = 1;
+    int32 taskType = 1;
+    int64 num = 2;
 }
 
 message BackendResponse {
-    string feedback = 1;
+    int64 output = 1;
 }
 
 message LoadBalancerRequest {
-    int64 load = 1;
+    int32 taskType = 1;
 }
 
 message LoadBalancerResponse {

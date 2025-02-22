@@ -221,3 +221,105 @@ var LoadBalancingService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "protofiles/message.proto",
 }
+
+const (
+	ReportLoadService_ReportLoadRPC_FullMethodName = "/message.ReportLoadService/ReportLoadRPC"
+)
+
+// ReportLoadServiceClient is the client API for ReportLoadService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ReportLoadServiceClient interface {
+	ReportLoadRPC(ctx context.Context, in *LoadStatus, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type reportLoadServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewReportLoadServiceClient(cc grpc.ClientConnInterface) ReportLoadServiceClient {
+	return &reportLoadServiceClient{cc}
+}
+
+func (c *reportLoadServiceClient) ReportLoadRPC(ctx context.Context, in *LoadStatus, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, ReportLoadService_ReportLoadRPC_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReportLoadServiceServer is the server API for ReportLoadService service.
+// All implementations must embed UnimplementedReportLoadServiceServer
+// for forward compatibility.
+type ReportLoadServiceServer interface {
+	ReportLoadRPC(context.Context, *LoadStatus) (*Empty, error)
+	mustEmbedUnimplementedReportLoadServiceServer()
+}
+
+// UnimplementedReportLoadServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedReportLoadServiceServer struct{}
+
+func (UnimplementedReportLoadServiceServer) ReportLoadRPC(context.Context, *LoadStatus) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReportLoadRPC not implemented")
+}
+func (UnimplementedReportLoadServiceServer) mustEmbedUnimplementedReportLoadServiceServer() {}
+func (UnimplementedReportLoadServiceServer) testEmbeddedByValue()                           {}
+
+// UnsafeReportLoadServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ReportLoadServiceServer will
+// result in compilation errors.
+type UnsafeReportLoadServiceServer interface {
+	mustEmbedUnimplementedReportLoadServiceServer()
+}
+
+func RegisterReportLoadServiceServer(s grpc.ServiceRegistrar, srv ReportLoadServiceServer) {
+	// If the following call pancis, it indicates UnimplementedReportLoadServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ReportLoadService_ServiceDesc, srv)
+}
+
+func _ReportLoadService_ReportLoadRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoadStatus)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReportLoadServiceServer).ReportLoadRPC(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ReportLoadService_ReportLoadRPC_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReportLoadServiceServer).ReportLoadRPC(ctx, req.(*LoadStatus))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ReportLoadService_ServiceDesc is the grpc.ServiceDesc for ReportLoadService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ReportLoadService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "message.ReportLoadService",
+	HandlerType: (*ReportLoadServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ReportLoadRPC",
+			Handler:    _ReportLoadService_ReportLoadRPC_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "protofiles/message.proto",
+}
