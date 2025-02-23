@@ -18,7 +18,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 )
-
+	
 func getAvaliablePort() (int, error) {
 	listener, err := net.Listen("tcp", ":0") // ":0" lets OS pick a free port
 	if err != nil {
@@ -124,6 +124,7 @@ func keepAlive(client *clientv3.Client, leaseID clientv3.LeaseID) {
 
 func main() {
 	// Initialize etcd client
+
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{etcdServerAddr},
 		DialTimeout: 2 * time.Second,
@@ -133,13 +134,22 @@ func main() {
 	}
 	defer etcdClient.Close()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	resp, err := etcdClient.Status(ctx, etcdServerAddr)
+	if err != nil {
+		log.Fatalf("Etcd is not running or unreachable: %v", err)
+	}
+
+	log.Println("Etcd is running! Version:", resp.Version)
 	// Create a lease
 	leaseResp, err := etcdClient.Grant(context.Background(), ttl)
 	if err != nil {
 		log.Fatalf("Failed to create lease: %v", err)
 	}
 	leaseID := leaseResp.ID
-
+	
 	serverAddr, err := getAvaliableAddress()
 	if err != nil {
 		log.Fatalf("Failed to get avaliable address: %v", err)

@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package mapreduce;
+
+option go_package = "q2/protofiles";
+
+service WorkerService {
+    rpc MapRPC (MapRequest) returns (MapResponse);
+    rpc ReduceRPC (ReduceRequest) returns (ReduceResponse);
+}
+
+// service RegisterWorkerService {
+//     rpc RegisterRPC (RegisterRequest) returns (RegisterResponse);
+// } 
+
+service SubmitResultService {
+    rpc MapResultRPC (MapResult) returns (MapResultResponse);
+    rpc ReduceResultRPC (ReduceResult) returns (ReduceResultResponse);
+}
+
+message MapResult {
+}
+
+message ReduceResult {
+}
+
+message MapResultResponse {
+}
+
+message ReduceResultResponse {
+}
+
+// message RegisterRequest {
+//     string serverAddr = 1;
+// }
+
+// message RegisterResponse {}
+
+message MapRequest {
+    string inputfile = 1;
+    int32 numReduce = 2;
+    int32 mapperId = 3;
+}
+
+message ReduceRequest {
+    int32 reducerId = 1;
+    int32 numMappers = 2;
+}
+
+message MapResponse {
+}
+message ReduceResponse {
+}
+
+
+
+

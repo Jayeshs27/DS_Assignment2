@@ -90,6 +90,7 @@ func discoverBackends(client *clientv3.Client) {
 		for _, kv := range resp.Kvs {
 			servers = append(servers, string(kv.Value))
 		}
+		
 		backendServersInfo.mutexLock.Lock()
 		updatedLoadStatus := make(map[string]float32)
 		
