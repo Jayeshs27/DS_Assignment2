@@ -7,6 +7,7 @@ option go_package = "q2/protofiles";
 service WorkerService {
     rpc MapRPC (MapRequest) returns (MapResponse);
     rpc ReduceRPC (ReduceRequest) returns (ReduceResponse);
+    rpc ExitRPC (Empty) returns (Empty);
 }
 
 // service RegisterWorkerService {
@@ -17,6 +18,8 @@ service SubmitResultService {
     rpc MapResultRPC (MapResult) returns (MapResultResponse);
     rpc ReduceResultRPC (ReduceResult) returns (ReduceResultResponse);
 }
+
+message Empty{}
 
 message MapResult {
 }

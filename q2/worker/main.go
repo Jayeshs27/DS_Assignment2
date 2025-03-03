@@ -2,22 +2,23 @@ package main
 
 import (
 	"context"
+	"time"
 	// "fmt"
 	"log"
 	"net"
+
 	// "time"
 	"bufio"
 	"fmt"
 	"hash/fnv"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 
 	mapReducepb "q2/protofiles"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
 )
 
 // Merges intermediate files and directly stores reduced output
@@ -26,7 +27,7 @@ func mergeAndReduce(numMappers int, reducerId int) {
 
 	// Read all intermediate files for reducer r
 	for m := 0; m < numMappers; m++ {
-		inputFile := fmt.Sprintf("map-%d-%d.txt", m, reducerId)
+		inputFile := fmt.Sprintf("mapper_output/map-%d-%d.txt", m, reducerId)
 		file, err := os.Open(inputFile)
 		if err != nil {
 			log.Printf("Skipping missing file: %s\n", inputFile)
@@ -53,7 +54,7 @@ func mergeAndReduce(numMappers int, reducerId int) {
 		file.Close()
 	}
 	// Write reduced output directly to final reduce-%d.txt
-	outputFile, err := os.Create(fmt.Sprintf("reduce-%d.txt", reducerId))
+	outputFile, err := os.Create(fmt.Sprintf("reduce_output/reduce-%d.txt", reducerId))
 	if err != nil {
 		log.Fatalf("Failed to create reduce output file: %v", err)
 	}
@@ -101,7 +102,7 @@ func processMapTask(mapperID int, inputFile string, numReduce int) {
 	// Create intermediate files for each reducer
 	intermediateFiles := make([]*os.File, numReduce)
 	for i := 0; i < numReduce; i++ {
-		filename := fmt.Sprintf("map-%d-%d.txt", mapperID, i) // Unique for each Mapper
+		filename := fmt.Sprintf("mapper_output/map-%d-%d.txt", mapperID, i) // Unique for each Mapper
 		intermediateFiles[i], _ = os.Create(filename)
 		defer intermediateFiles[i].Close()
 	}
@@ -127,8 +128,10 @@ func processMapTask(mapperID int, inputFile string, numReduce int) {
 
 
 const (
-	workerAddr = "localhost:23111"
 	masterServerAddr = "localhost:50411"
+)
+var (
+	workerAddr = ""
 )
 
 type WorkerServiceServer struct {
@@ -161,6 +164,18 @@ func (s *WorkerServiceServer) ReduceRPC(ctx context.Context, req *mapReducepb.Re
 
 	// Return immediately to prevent blocking the master
 	return &mapReducepb.ReduceResponse{}, nil
+}
+
+func (s *WorkerServiceServer) ExitRPC(ctx context.Context, req *mapReducepb.Empty) (*mapReducepb.Empty, error) {
+	log.Println("WorkerAddr:",workerAddr,", Received Exit Request, Exiting...")
+
+	// Run Reduce Task in a separate goroutine
+	go func() {
+		time.Sleep(time.Second)
+		os.Exit(0)
+	}()
+	// Return immediately to prevent blocking the master
+	return &mapReducepb.Empty{}, nil
 }
 
 func sendMapResults(client mapReducepb.SubmitResultServiceClient) (error){
@@ -202,7 +217,7 @@ func main() {
 		log.Fatalf("Usage: go run master.go <port>")
 	}
 	// Get directory and numReduce from command-line arguments
-	workerAddr := fmt.Sprintf("localhost:%s",os.Args[1])
+	workerAddr = fmt.Sprintf("localhost:%s",os.Args[1])
 	
 	listener, err := net.Listen("tcp", workerAddr)
 	if err != nil {

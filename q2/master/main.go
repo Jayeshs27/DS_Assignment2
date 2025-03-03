@@ -90,7 +90,7 @@ func (s *MasterServer) ReduceResultRPC(ctx context.Context, req *mapReducepb.Red
 func main() {
 	// Ensure correct usage
 	if len(os.Args) < 3 {
-		log.Fatalf("Usage: go run master.go <directory> <numReduce>")
+		log.Fatalf("Invalid Arguments, Usage: go run master.go <data-directory> <numReduce>")
 	}
 
 	// Get directory and numReduce from command-line arguments
@@ -146,8 +146,9 @@ func main() {
 			log.Fatalf("Failed to start worker %d: %v", i, err)
 		}
 		log.Printf("Started worker %d on port %d\n", i, workerPort)
+		time.Sleep(500 * time.Millisecond)
 	}
-	time.Sleep(2 * time.Second)
+
 	// Connect to workers and assign Map tasks
 	for i, file := range files {
 		if file.IsDir() {
@@ -174,7 +175,7 @@ func main() {
 		}
 	}
 
-	// Wait for all Map tasks to complete
+	// // Wait for all Map tasks to complete
 	log.Println("Waiting for Mapper...")
 	<-master.mapDone
 	// Determine the number of reducers to spawn
@@ -198,10 +199,11 @@ func main() {
 				log.Fatalf("Failed to start extra worker %d: %v", i, err)
 			}
 			log.Printf("Started extra worker %d on port %d for reducers\n", numMappers+i, workerPort)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 
-	// Connect to workers and assign Reduce tasks
+	// // Connect to workers and assign Reduce tasks
 	for i := 0; i < numReducers; i++ {
 		workerAddr := fmt.Sprintf("localhost:%d", workerPorts[i%numMappers])
 		conn, err := grpc.NewClient(workerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -221,8 +223,27 @@ func main() {
 		}
 	}
 	// Wait for all Reduce tasks to complete
-	log.Println("Waiting for Mapper...")
+	log.Println("Waiting for Reducer...")
 	<-master.reduceDone
 
 	log.Println("Master - MapReduce Job Completed Successfully!")
+
+	for _, Ports := range workerPorts {
+		workerAddr := fmt.Sprintf("localhost:%d", Ports)
+		conn, err := grpc.NewClient(workerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Printf("Failed to connect to worker %s: %v", workerAddr, err)
+			continue
+		}
+		defer conn.Close()
+	
+		client := mapReducepb.NewWorkerServiceClient(conn)
+		_, err = client.ExitRPC(context.Background(), &mapReducepb.Empty{})
+		if err != nil {
+			log.Printf("Failed to shut down worker %s: %v", workerAddr, err)
+		} 
+		// else {
+		// 	log.Printf("Worker %s shut down successfully", workerAddr)
+		// }
+	}
 }
