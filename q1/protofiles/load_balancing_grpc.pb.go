@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: protofiles/message.proto
+// source: protofiles/load_balancing.proto
 
 package protofiles
 
@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BackendService_BackendRPC_FullMethodName = "/message.BackendService/BackendRPC"
+	BackendService_BackendRPC_FullMethodName = "/lbproto.BackendService/BackendRPC"
 )
 
 // BackendServiceClient is the client API for BackendService service.
@@ -108,7 +108,7 @@ func _BackendService_BackendRPC_Handler(srv interface{}, ctx context.Context, de
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var BackendService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.BackendService",
+	ServiceName: "lbproto.BackendService",
 	HandlerType: (*BackendServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -117,11 +117,11 @@ var BackendService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protofiles/message.proto",
+	Metadata: "protofiles/load_balancing.proto",
 }
 
 const (
-	LoadBalancingService_LoadBalancerRPC_FullMethodName = "/message.LoadBalancingService/LoadBalancerRPC"
+	LoadBalancingService_LoadBalancerRPC_FullMethodName = "/lbproto.LoadBalancingService/LoadBalancerRPC"
 )
 
 // LoadBalancingServiceClient is the client API for LoadBalancingService service.
@@ -210,7 +210,7 @@ func _LoadBalancingService_LoadBalancerRPC_Handler(srv interface{}, ctx context.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var LoadBalancingService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.LoadBalancingService",
+	ServiceName: "lbproto.LoadBalancingService",
 	HandlerType: (*LoadBalancingServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -219,11 +219,11 @@ var LoadBalancingService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protofiles/message.proto",
+	Metadata: "protofiles/load_balancing.proto",
 }
 
 const (
-	ReportLoadService_ReportLoadRPC_FullMethodName = "/message.ReportLoadService/ReportLoadRPC"
+	ReportLoadService_ReportLoadRPC_FullMethodName = "/lbproto.ReportLoadService/ReportLoadRPC"
 )
 
 // ReportLoadServiceClient is the client API for ReportLoadService service.
@@ -312,7 +312,7 @@ func _ReportLoadService_ReportLoadRPC_Handler(srv interface{}, ctx context.Conte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ReportLoadService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.ReportLoadService",
+	ServiceName: "lbproto.ReportLoadService",
 	HandlerType: (*ReportLoadServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -321,5 +321,5 @@ var ReportLoadService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protofiles/message.proto",
+	Metadata: "protofiles/load_balancing.proto",
 }

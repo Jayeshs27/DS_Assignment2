@@ -6,12 +6,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 	// "math/rand"
 	"sync"
 	"time"
 
-	messageproto "q1/protofiles"
+	lbproto "q1/protofiles"
 
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
@@ -20,11 +19,11 @@ import (
 const (
 	etcdServerAddr = "localhost:2379"
 	etcdKeyPrefix  = "/services/backend/"
-	lbServerAddr   = "localhost:50311" // Change per instance
+	lbServerAddr   = "localhost:50319" 
 )
 
 var (
-	loadBalancingPolicy = 0
+	loadBalancingPolicy = "PF"
 )
 
 type BackendServerInfo struct {
@@ -35,38 +34,29 @@ type BackendServerInfo struct {
 }
 
 type LoadBalancingServer struct {
-	messageproto.UnimplementedLoadBalancingServiceServer
+	lbproto.UnimplementedLoadBalancingServiceServer
 }
 
 type ReportLoadServer struct {
-	messageproto.UnimplementedReportLoadServiceServer
+	lbproto.UnimplementedReportLoadServiceServer
 }
 
 var backendServersInfo = &BackendServerInfo{}
 
 
-func (s *LoadBalancingServer) LoadBalancerRPC(ctx context.Context, req *messageproto.LoadBalancerRequest) (*messageproto.LoadBalancerResponse, error) {
+func (s *LoadBalancingServer) LoadBalancerRPC(ctx context.Context, req *lbproto.LoadBalancerRequest) (*lbproto.LoadBalancerResponse, error) {
 	tasktype := req.GetTaskType()
 	log.Println("Load Balancer - Task Received from Client:", tasktype)
 	backendAddr, err := getBackendServer()
 	if err != nil{
-		return &messageproto.LoadBalancerResponse{BestServer: ""}, err
+		return &lbproto.LoadBalancerResponse{BestServer: ""}, err
 	}
-	// time.Sleep(5 * time.Second)
-	return &messageproto.LoadBalancerResponse{BestServer: backendAddr}, nil
+	return &lbproto.LoadBalancerResponse{BestServer: backendAddr}, nil
 }
 
-func (s *ReportLoadServer) ReportLoadRPC(ctx context.Context, req *messageproto.LoadStatus) (*messageproto.Empty, error) {
+func (s *ReportLoadServer) ReportLoadRPC(ctx context.Context, req *lbproto.LoadStatus) (*lbproto.Empty, error) {
 	serverAddr, load := req.GetServerAddr(), req.GetLoad()
 	// log.Printf("Load Balancer - Load Status Received from Backend Server-%s, Load:%f\n", serverAddr, load)
-	
-	// for i := 0 ; i < len(backendServersInfo.availableServers) ; i++ {
-	// 	if backendServersInfo.availableServers[i] == serverAddr {
-	// 		backendServersInfo.backendServersLoad[i] = load
-	// 		break
-	// 	}
-	// }
-	
 	backendServersInfo.mutexLock.Lock()
 	_, exists := backendServersInfo.loadStatus[serverAddr]
 	if exists {
@@ -74,7 +64,7 @@ func (s *ReportLoadServer) ReportLoadRPC(ctx context.Context, req *messageproto.
 	}
 	backendServersInfo.mutexLock.Unlock()
 
-	return &messageproto.Empty{}, nil
+	return &lbproto.Empty{}, nil
 }
 
 func discoverBackends(client *clientv3.Client) {
@@ -94,18 +84,14 @@ func discoverBackends(client *clientv3.Client) {
 		backendServersInfo.mutexLock.Lock()
 		updatedLoadStatus := make(map[string]float32)
 		
-		fmt.Print("CPU loads: ")
 		for _, serverAddr := range servers {
 			load, exists := backendServersInfo.loadStatus[serverAddr]
 			if exists {
 				updatedLoadStatus[serverAddr] = load
-				fmt.Print(" ", load)
 			} else {
 				updatedLoadStatus[serverAddr] = 0.0
-				fmt.Print(" 0.0")
 			}
 		}
-		fmt.Print("\n")
 
 		backendServersInfo.loadStatus = updatedLoadStatus
 		backendServersInfo.availableServers = servers
@@ -115,97 +101,77 @@ func discoverBackends(client *clientv3.Client) {
 		time.Sleep(2 * time.Second)
 	}
 }	
+
 func usePickFirst() (string){
-	return backendServersInfo.availableServers[0]
+	backendServersInfo.mutexLock.Lock()
+	reqServer := backendServersInfo.availableServers[0]
+	backendServersInfo.mutexLock.Unlock()
+	return reqServer
 }
 
 func useRoundRobin() (string){
+	backendServersInfo.mutexLock.Lock()
+
 	index := backendServersInfo.rrIndex
+	num_servers := len(backendServersInfo.availableServers)
+
 	for {
 		server := backendServersInfo.availableServers[index]
 		_, exists := backendServersInfo.loadStatus[server]
 		if exists {
-			index = (index + 1) % len(backendServersInfo.availableServers)
+			index = (index + 1) % num_servers
 			break;
 		}
-		index = (index + 1) % len(backendServersInfo.availableServers)
+		index = (index + 1) % num_servers
 	}
-	reqServer := backendServersInfo.availableServers[index + 1]
+
+	reqServer := backendServersInfo.availableServers[index]
+	backendServersInfo.rrIndex = (index + 1) % num_servers
+
+	backendServersInfo.mutexLock.Unlock()
 	return reqServer
 }
 
 func useLeastLoad() (string){
+	backendServersInfo.mutexLock.Lock()
+
 	reqServer := backendServersInfo.availableServers[0]
 	minLoad := backendServersInfo.loadStatus[reqServer]
+
 	for _, server := range backendServersInfo.availableServers {
 		if backendServersInfo.loadStatus[server] < minLoad {
 			minLoad = backendServersInfo.loadStatus[server]
 			reqServer = server
 		}
 	}
+
+	backendServersInfo.mutexLock.Unlock()
 	return reqServer
 }
 
 func getBackendServer() (string, error){
-	// to - do : implement all three policies here
 	if len(backendServersInfo.availableServers) == 0{
 		return "", fmt.Errorf("no available backend servers")
 	}
-	if loadBalancingPolicy == 0 {  // Pick First Policy
+
+	if loadBalancingPolicy == "PF" {  // Pick First Policy
 		return usePickFirst(), nil
-	} else if loadBalancingPolicy == 1 {
+	} else if loadBalancingPolicy == "RR" {  // Round Robin Policy
 		return useRoundRobin(), nil
 	} else {
-		return useLeastLoad(), nil
+		return useLeastLoad(), nil   // Least Load Policy
 	}
 }
 
-// func handleClientRequests() {
-
-	// for {
-	// 	backend := getBackend()
-	// 	if backend == "" {
-	// 		log.Println("No available backend servers")
-	// 		time.Sleep(3 * time.Second)
-	// 		continue
-	// 	}
-
-	// 	conn, err := grpc.Dial(backend, grpc.WithInsecure())
-	// 	if err != nil {
-	// 		log.Printf("Failed to connect to backend %s: %v", backend, err)
-	// 		time.Sleep(3 * time.Second)
-	// 		continue
-	// 	}
-	// 	defer conn.Close()
-
-	// 	// client := messageproto.NewMessageServiceClient(conn)
-	// 	// req := &messageproto.MessageRequest{Message: "Hello from Load Balancer"}
-	// 	// resp, err := client.MessageRPC(context.Background(), req)
-	// 	// if err != nil {
-	// 	// 	log.Printf("RPC failed to backend %s: %v", backend, err)
-	// 	// 	time.Sleep(3 * time.Second)
-	// 	// 	continue
-	// 	// }
-
-	// 	// log.Printf("Response from backend %s: %s", backend, resp.GetResponse())
-	// 	// time.Sleep(3 * time.Second) // Simulating continuous client requests
-	// }
-// }
-
 func main() {
 	args := os.Args[1:]
-	if len(args) != 1{
-		log.Fatalf("Invalid number of command line arguments, expected 1")
+
+	if len(args) == 1 {
+		if args[0] != "RR" && args[0] != "PF" && args[0] != "LL"{
+			log.Fatalf("Invalid load balancing policy. Use 'RR' or 'PF' or 'LL'.")
+		}
+		loadBalancingPolicy = args[0] 
 	}
-	lbPolicy, err1 := strconv.Atoi(args[0])
-	fmt.Println("Policy:", args[0])
-	if err1 != nil {
-		log.Fatalf("Invalid command line arguments")
-	}
-	if lbPolicy > 3 || lbPolicy < 0 {
-		log.Fatalf("Invalid load balancing policy")
-	}
-	loadBalancingPolicy = lbPolicy
 
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{etcdServerAddr},
@@ -216,26 +182,21 @@ func main() {
 	}
 	defer etcdClient.Close()
 
-	// backendInfo := BackendServerInfo{}
-
-	// to do lb handles -> requests from client as well as backends
-	// dynamic server discovery is separate from monitoring availability and load reporting
-
 	go discoverBackends(etcdClient)
 
 	listener, err := net.Listen("tcp", lbServerAddr)
 	if err != nil {
 		log.Fatalf("Load Balancing Server Failed to listen: %v", err)
 	}
+	defer listener.Close()
+
 	lbServer := grpc.NewServer()
 
-	messageproto.RegisterLoadBalancingServiceServer(lbServer, &LoadBalancingServer{})
-	messageproto.RegisterReportLoadServiceServer(lbServer, &ReportLoadServer{})
+	lbproto.RegisterLoadBalancingServiceServer(lbServer, &LoadBalancingServer{})
+	lbproto.RegisterReportLoadServiceServer(lbServer, &ReportLoadServer{})
 
 	log.Println("Load Balancing Server is running on", lbServerAddr)
 	if err := lbServer.Serve(listener); err != nil {
 		log.Fatalf("Load Balancing Server Failed to serve: %v", err)
 	}
-	// Handle client requests dynamically
-	// handleClientRequests()
 }

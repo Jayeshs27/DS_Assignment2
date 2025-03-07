@@ -12,15 +12,13 @@ import (
 	"strconv"
 	"strings"
 	
-	messageproto "q1/protofiles"
-	// "github.com/shirou/gopsutil/v3/cpu"
-	// "github.com/shirou/gopsutil/v3/process"
+	lbproto "q1/protofiles"
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 )
 	
 func getAvaliablePort() (int, error) {
-	listener, err := net.Listen("tcp", ":0") // ":0" lets OS pick a free port
+	listener, err := net.Listen("tcp", ":0") 
 	if err != nil {
 		return 0, err
 	}
@@ -43,6 +41,7 @@ func parseCmdOutput(output string) (float64, error){
 	}
 	return cpuUsage, nil
 }
+
 func getCpuUsage()(float64, error){
 	pid := os.Getpid()
 	cmd := exec.Command("top", "-b", "-n", "1", "-p", strconv.Itoa(pid))
@@ -57,7 +56,7 @@ func getCpuUsage()(float64, error){
 	if err != nil{
 		return 0.0, err
 	}
-	fmt.Println("Pid:",pid , "CPU Usage:", cpuUsage, "%")
+	// fmt.Println("Pid:",pid , "CPU Usage:", cpuUsage, "%")
 	return cpuUsage, nil
 }
 
@@ -73,28 +72,33 @@ func getAvaliableAddress() (string, error) {
 const (
 	etcdServerAddr = "localhost:2379"
 	etcdKeyPrefix  = "/services/backend/"
-	lbServerAddr   = "localhost:50311"
+	lbServerAddr   = "localhost:50319"
 	ttl            = 2                   // TTL in seconds for etcd lease
 )
 
+var (
+	serverAddr = ""
+)
+
 type BackendServer struct {
-	messageproto.UnimplementedBackendServiceServer
+	lbproto.UnimplementedBackendServiceServer
 }
 
-func (s *BackendServer) BackendRPC(ctx context.Context, req *messageproto.BackendRequest) (*messageproto.BackendResponse, error) {
+func (s *BackendServer) BackendRPC(ctx context.Context, req *lbproto.BackendRequest) (*lbproto.BackendResponse, error) {
 	tasktype, num := req.GetTaskType(), req.GetNum()
 	log.Printf("Task Received : %d, N : %d\n", tasktype, num)
 	result := executeTask(tasktype, num)
-	return &messageproto.BackendResponse{Output: result}, nil
+	log.Printf("Server:%s, Task:%d Completed!, Sending Response...\n", serverAddr, tasktype)
+	return &lbproto.BackendResponse{Output: result}, nil
 }
 
-func ReportLoadStatus(client messageproto.ReportLoadServiceClient, serverAddr string){
+func ReportLoadStatus(client lbproto.ReportLoadServiceClient, serverAddr string){
 	for{
 		load, err := getCpuUsage()
 		if err != nil {
 			log.Fatalf("Error while getting CPU load: %v", err)
 		}
-		loadStatus := &messageproto.LoadStatus{ServerAddr:serverAddr, Load: float32(load)}
+		loadStatus := &lbproto.LoadStatus{ServerAddr:serverAddr, Load: float32(load)}
 		_, err = client.ReportLoadRPC(context.Background(), loadStatus)
 		if err != nil{
 			log.Fatalf("Error while send Load Status: %v", err)
@@ -102,7 +106,7 @@ func ReportLoadStatus(client messageproto.ReportLoadServiceClient, serverAddr st
 		time.Sleep(1 * time.Second)
 	}
 }
-// Register server with etcd
+
 func registerWithEtcd(client *clientv3.Client, leaseID clientv3.LeaseID, serverAddr string) {
 	etcdKey := fmt.Sprintf("%s%s", etcdKeyPrefix, serverAddr)
 	_, err := client.Put(context.Background(), etcdKey, serverAddr, clientv3.WithLease(leaseID))
@@ -112,19 +116,15 @@ func registerWithEtcd(client *clientv3.Client, leaseID clientv3.LeaseID, serverA
 	log.Printf("Registered %s with etcd", serverAddr)
 }
 
-// Maintain heartbeat with etcd
 func keepAlive(client *clientv3.Client, leaseID clientv3.LeaseID) {
 	ch, err := client.KeepAlive(context.Background(), leaseID)
 	if err != nil {
 		log.Fatalf("Failed to keep alive: %v", err)
 	}
-	// fmt.Println(ch)
 	for range ch {}  // to consumed keepalive responses
 }
 
 func main() {
-	// Initialize etcd client
-
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{etcdServerAddr},
 		DialTimeout: 2 * time.Second,
@@ -150,7 +150,7 @@ func main() {
 	}
 	leaseID := leaseResp.ID
 	
-	serverAddr, err := getAvaliableAddress()
+	serverAddr, err = getAvaliableAddress()
 	if err != nil {
 		log.Fatalf("Failed to get avaliable address: %v", err)
 	}
@@ -161,14 +161,8 @@ func main() {
 
 	go keepAlive(etcdClient, leaseID)
 
-	// cpuLoad, err := getCpuLoad()
-	// if err != nil {
-	// 	log.Fatalf("Error while getting CPU usage: %v", err)
-	// }
-	// log.Println("Current CPU Usage: ", cpuLoad)
-
 	conn, err := grpc.Dial(lbServerAddr, grpc.WithInsecure())
-	reportLoadClient := messageproto.NewReportLoadServiceClient(conn)
+	reportLoadClient := lbproto.NewReportLoadServiceClient(conn)
 	go ReportLoadStatus(reportLoadClient, serverAddr)
 	
 	listener, err := net.Listen("tcp", serverAddr)
@@ -178,7 +172,7 @@ func main() {
 	defer listener.Close()
 
 	backendServer := grpc.NewServer()
-	messageproto.RegisterBackendServiceServer(backendServer, &BackendServer{})
+	lbproto.RegisterBackendServiceServer(backendServer, &BackendServer{})
 
 	log.Println("Backend gRPC server is running on", serverAddr)
 	if err := backendServer.Serve(listener); err != nil {

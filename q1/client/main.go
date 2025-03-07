@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	messageproto "q1/protofiles"
+	lbproto "q1/protofiles"
 	"strconv"
 
 	"google.golang.org/grpc"
@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	lbServerAddr = "localhost:50311"
+	lbServerAddr = "localhost:50319"
 )
 
-func sendRequestToLoadBalancer(client messageproto.LoadBalancingServiceClient, tasktype int) (string, error){
-	req := &messageproto.LoadBalancerRequest{TaskType: int32(tasktype)}
+func sendRequestToLoadBalancer(client lbproto.LoadBalancingServiceClient, tasktype int) (string, error){
+	req := &lbproto.LoadBalancerRequest{TaskType: int32(tasktype)}
 
 	resp, err := client.LoadBalancerRPC(context.Background(), req)
 	if err != nil {
@@ -29,8 +29,8 @@ func sendRequestToLoadBalancer(client messageproto.LoadBalancingServiceClient, t
 	return resp.GetBestServer(), nil
 }
 
-func sendRequestToBackendServer(client messageproto.BackendServiceClient, taskType int, num int64){
-	req := &messageproto.BackendRequest{TaskType: int32(taskType), Num: num}
+func sendRequestToBackendServer(client lbproto.BackendServiceClient, taskType int, num int64){
+	req := &lbproto.BackendRequest{TaskType: int32(taskType), Num: num}
 
 	resp, err := client.BackendRPC(context.Background(), req)
 	if err != nil {
@@ -59,7 +59,7 @@ func main(){
 	}
 	defer conn.Close()
 
-	lbClient := messageproto.NewLoadBalancingServiceClient(conn)
+	lbClient := lbproto.NewLoadBalancingServiceClient(conn)
 
 	backendAddr, err := sendRequestToLoadBalancer(lbClient, tasktype)
 	if err != nil{
@@ -70,10 +70,10 @@ func main(){
 		log.Fatalf("Client - Could not connet to Backend server with Addr: %s, error: %v", backendAddr, err)
 	}
 	
-	backendClient := messageproto.NewBackendServiceClient(conn2)
+	backendClient := lbproto.NewBackendServiceClient(conn2)
 
 	if tasktype == 0{
-		sendRequestToBackendServer(backendClient, tasktype, 1e10)
+		sendRequestToBackendServer(backendClient, tasktype, 1e9)
 	} else if tasktype == 1{
 		sendRequestToBackendServer(backendClient, tasktype, 1e6)
 	}else{
