@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package paymentpb;
+
+option go_package = "q3/protofiles";
+
+service PaymentService {
+  rpc Authenticate(UserCredentials) returns (AuthResponse);
+  rpc MakePayment(PaymentRequest) returns (PaymentResponse);
+}
+
+service BankService {
+  rpc DebitBalance(DebitRequest) returns (DebitResponse);
+  rpc CreditBalance(CreditRequest) returns (CreditResponse);
+  rpc CheckBalance(CheckBalanceRequest) returns (CheckBalanceResponse);
+}
+
+message UserCredentials {
+  string username = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  string token = 1;
+  string role = 2;
+}
+
+message PaymentRequest {
+  string token = 1;
+  string recipient_account = 2;
+  double amount = 3;
+}
+
+message PaymentResponse {
+  string status = 1;
+  string message = 2;
+}
+
+message DebitRequest {
+  string AccNo = 1;
+}
+
+message DebitResponse {
+  string status = 1;
+}
+
+message CreditRequest {
+  string AccNo = 1;
+}
+
+message CreditResponse {
+  string status = 1;
+}
+
+message CheckBalanceRequest {
+  string AccNo = 1;
+}
+
+message CheckBalanceResponse {
+  int64 CurrBalance = 1;
+}

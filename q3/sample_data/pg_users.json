@@ -1,0 +1,23 @@
+[
+  {
+    "username": "charlie",
+    "password": "$2a$10$y/R/XuRy9cmzbIZ9gMbUWO7claBVwXO6jxbS6iw6lcx/hWXarqi52",
+    "role": "customer",
+    "account_no": "123456",
+    "bank_id": 1
+  },
+  {
+    "username": "alice",
+    "password": "$2a$10$dIQvBnNFhNd9YTOgCjqBjuCG0HCG1RiYcaLxCF0d3fOrVVWGOsiJe",
+    "role": "customer",
+    "account_no": "001122",
+    "bank_id": 1
+  },
+  {
+    "username": "bob",
+    "password": "$2a$10$Ne9pq0VwwKkXTSBPMrrwwOvo/eoqTQPE1pz1XB0PdUAw6OietSPpG",
+    "role": "customer",
+    "account_no": "445566",
+    "bank_id": 2
+  }
+]
