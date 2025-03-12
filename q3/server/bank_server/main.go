@@ -9,6 +9,7 @@ import (
 	"os"
 	"log"
 	"net"
+	"strconv"
 	// "time"
 
 	// "golang.org/x/crypto/bcrypt"
@@ -20,12 +21,24 @@ import (
 )
 
 const (
-	bankServerAddr = "localhost:45331"
+	paymentGatewayAddr = "localhost:45301"
 )
 
 var (
 	bSLogger *common.Logger
+	bankServer *BankServer
+	credsAsClient credentials.TransportCredentials
+	credsAsServer credentials.TransportCredentials
 )
+
+func getAvaliablePort() (int, error) {
+	listener, err := net.Listen("tcp", ":0") 
+	if err != nil {
+		return 0, err
+	}
+	defer listener.Close()
+	return listener.Addr().(*net.TCPAddr).Port, nil
+}
 
 // JWT Secret Key
 // var jwtKey = []byte("bank_server_key") 
@@ -41,10 +54,28 @@ func (c *Customer) SubtractAmount(amount float32){
 	c.CurrBalance -= amount
 }
 
+func (c *Customer) AddAmount(amount float32){
+	c.CurrBalance += amount
+}
 // PaymentServer struct
 type BankServer struct {
 	pb.UnimplementedBankServiceServer
 	Customers map[string]*Customer
+	bankName string
+	bankServerAddr string
+}
+
+func NewBankServer(bankName string)(*BankServer, error){
+	customers := loadUsers("sample_data/bank_customers.json")
+	port, err := getAvaliablePort()
+	if err != common.ErrSuccess{
+		return &BankServer{}, err
+	}
+	return &BankServer{
+		Customers: customers,
+		bankName: bankName,
+		bankServerAddr: fmt.Sprintf("localhost:%d",port),
+	}, common.ErrSuccess
 }
 
 func loadUsers(filename string) map[string]*Customer {
@@ -63,37 +94,37 @@ func loadUsers(filename string) map[string]*Customer {
 	return customerMap
 }
 
-var (
-	bankServer *BankServer
-)
-
-func (s *BankServer) CheckBalance(ctx context.Context, req *pb.CheckBalanceRequest) (*pb.CheckBalanceResponse, error) {
-	accNo := req.AccNo
-	customer, exists := bankServer.Customers[accNo]
-	fmt.Printf("check balance request received for acc_no:%s\n", accNo)
-	if !exists {
-		return &pb.CheckBalanceResponse{CurrBalance: 0}, common.ErrInvalidAccountNo
+func SendRegisterRequest()(error){
+	// Connect to server
+	conn, err := grpc.NewClient(paymentGatewayAddr, 
+								grpc.WithTransportCredentials(credsAsClient),
+							  	)
+	if err != common.ErrSuccess{
+		return err
 	}
-	return &pb.CheckBalanceResponse{CurrBalance: customer.CurrBalance}, common.ErrSuccess
+	client := pb.NewPaymentServiceClient(conn)
+	req := &pb.RegisterRequest{BankName: bankServer.bankName, 
+							   BankServerAddr: bankServer.bankServerAddr}
+	_, err = client.BankServerDiscovery(context.Background(), req)
+	if err != common.ErrSuccess {
+		return err
+	}
+	defer conn.Close()
+
+	return common.ErrSuccess
 }
-
-func (s *BankServer) DebitBalance(ctx context.Context, req *pb.DebitRequest) (*pb.DebitResponse, error) {
-	accNo := req.AccNo
-	customer, exists := bankServer.Customers[accNo]
-	fmt.Printf("debit balance request received for acc_no:%s\n", accNo)
-	if !exists {
-		return &pb.DebitResponse{}, common.ErrInvalidAccountNo
-	}
-	if customer.CurrBalance < req.Amount{
-		return &pb.DebitResponse{}, common.ErrInsufficientBalance
-	}
-	bankServer.Customers[accNo].SubtractAmount(req.Amount)
-	return &pb.DebitResponse{}, common.ErrSuccess
-}
-
 
 func main() {
-	customers := loadUsers("sample_data/bank_customers.json")
+	args := os.Args[1:]
+
+	if len(args) < 1{
+		log.Fatalf("missing command line argument")
+	}
+	bankId, err1 := strconv.Atoi(args[0])
+	if err1 != nil {
+		log.Fatalf("Invalid command line arguments")
+	}
+	bankName := fmt.Sprintf("bank%d",bankId)
 
 	cert, err := tls.LoadX509KeyPair("certs/bank_server.crt", "certs/bank_server.key")
 	if err != nil {
@@ -108,28 +139,43 @@ func main() {
 	certPool := x509.NewCertPool()
 	certPool.AppendCertsFromPEM(caCert)
 
-	creds := credentials.NewTLS(&tls.Config{
+	credsAsServer = credentials.NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientCAs:    certPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
+	})
+
+	credsAsClient = credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      certPool,
+		ServerName: "localhost",
 	})
 	
 	bSLogger = common.NewLogger("logs/bank_server")
 	defer bSLogger.Close()
 	
 	server := grpc.NewServer(
-		grpc.Creds(creds),
-		// grpc.ChainUnaryInterceptor(loggingInterceptor, authInterceptor),
+		grpc.Creds(credsAsServer),
+		grpc.UnaryInterceptor(bankLoggingInterceptor),
 	)
 	
-	bankServer = &BankServer{Customers: customers}
-	pb.RegisterBankServiceServer(server, &BankServer{Customers: customers})
+	bankServer, err = NewBankServer(bankName)
+	if err != common.ErrSuccess {
+		log.Fatalf("Failed to create bank server: %v", err)
+	}
 
-	listener, err := net.Listen("tcp", bankServerAddr)
+	pb.RegisterBankServiceServer(server, bankServer)
+
+	err = SendRegisterRequest()
+	if err != common.ErrSuccess {
+		log.Fatalf("Failed to register with payment gateway: %v", err)
+	}
+
+	listener, err := net.Listen("tcp", bankServer.bankServerAddr)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	fmt.Printf("Bank Server running on addr: %s...\n",bankServerAddr)
+	fmt.Printf("%s Server running on addr: %s...\n", bankServer.bankName, bankServer.bankServerAddr)
 	server.Serve(listener)
 }

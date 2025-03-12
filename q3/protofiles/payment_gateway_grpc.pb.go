@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PaymentService_Authenticate_FullMethodName = "/paymentpb.PaymentService/Authenticate"
-	PaymentService_GetBalance_FullMethodName   = "/paymentpb.PaymentService/GetBalance"
-	PaymentService_MakePayment_FullMethodName  = "/paymentpb.PaymentService/MakePayment"
+	PaymentService_Authenticate_FullMethodName        = "/paymentpb.PaymentService/Authenticate"
+	PaymentService_GetBalance_FullMethodName          = "/paymentpb.PaymentService/GetBalance"
+	PaymentService_MakePayment_FullMethodName         = "/paymentpb.PaymentService/MakePayment"
+	PaymentService_BankServerDiscovery_FullMethodName = "/paymentpb.PaymentService/BankServerDiscovery"
 )
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -31,6 +32,7 @@ type PaymentServiceClient interface {
 	Authenticate(ctx context.Context, in *UserCredentials, opts ...grpc.CallOption) (*AuthResponse, error)
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
 	MakePayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error)
+	BankServerDiscovery(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 }
 
 type paymentServiceClient struct {
@@ -71,6 +73,16 @@ func (c *paymentServiceClient) MakePayment(ctx context.Context, in *PaymentReque
 	return out, nil
 }
 
+func (c *paymentServiceClient) BankServerDiscovery(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, PaymentService_BankServerDiscovery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PaymentServiceServer is the server API for PaymentService service.
 // All implementations must embed UnimplementedPaymentServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type PaymentServiceServer interface {
 	Authenticate(context.Context, *UserCredentials) (*AuthResponse, error)
 	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
 	MakePayment(context.Context, *PaymentRequest) (*PaymentResponse, error)
+	BankServerDiscovery(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	mustEmbedUnimplementedPaymentServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedPaymentServiceServer) GetBalance(context.Context, *GetBalance
 }
 func (UnimplementedPaymentServiceServer) MakePayment(context.Context, *PaymentRequest) (*PaymentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MakePayment not implemented")
+}
+func (UnimplementedPaymentServiceServer) BankServerDiscovery(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BankServerDiscovery not implemented")
 }
 func (UnimplementedPaymentServiceServer) mustEmbedUnimplementedPaymentServiceServer() {}
 func (UnimplementedPaymentServiceServer) testEmbeddedByValue()                        {}
@@ -172,6 +188,24 @@ func _PaymentService_MakePayment_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentService_BankServerDiscovery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).BankServerDiscovery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_BankServerDiscovery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).BankServerDiscovery(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PaymentService_ServiceDesc is the grpc.ServiceDesc for PaymentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MakePayment",
 			Handler:    _PaymentService_MakePayment_Handler,
+		},
+		{
+			MethodName: "BankServerDiscovery",
+			Handler:    _PaymentService_BankServerDiscovery_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

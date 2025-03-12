@@ -28,6 +28,10 @@ func authInterceptor(
 	if strings.Contains(info.FullMethod, "Authenticate") {
 		return handler(ctx, req)
 	}
+
+	if strings.Contains(info.FullMethod, "BankServerDiscovery") {
+		return handler(ctx, req)
+	}
 	// Extract token from context metadata
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -81,7 +85,7 @@ func authInterceptor(
 	return handler(ctx, req)
 }
 
-func loggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
+func pgLoggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
 	handler grpc.UnaryHandler) (any, error) {
 	
 	pgLogger.PrintLog("Method: %s, Request: %v", info.FullMethod, req)

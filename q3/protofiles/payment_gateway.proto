@@ -8,12 +8,22 @@ service PaymentService {
   rpc Authenticate(UserCredentials) returns (AuthResponse);
   rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
   rpc MakePayment(PaymentRequest) returns (PaymentResponse);
+  rpc BankServerDiscovery(RegisterRequest) returns (RegisterResponse);
 }
 
 service BankService {
   rpc DebitBalance(DebitRequest) returns (DebitResponse);
   rpc CreditBalance(CreditRequest) returns (CreditResponse);
   rpc CheckBalance(CheckBalanceRequest) returns (CheckBalanceResponse);
+}
+
+message RegisterRequest{
+  string bankName = 1;
+  string bankServerAddr = 2;
+}
+
+message RegisterResponse{
+
 }
 
 message GetBalanceRequest{
@@ -36,7 +46,8 @@ message AuthResponse {
 
 message PaymentRequest {
   string token = 1;
-  string respAccNo = 2;
+  string recpAccNo = 2;
+  string recpBankName = 4;
   float amount = 3;
 }
 

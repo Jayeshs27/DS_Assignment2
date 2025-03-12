@@ -17,7 +17,6 @@ type User struct {
 }
 
 // JSON file path
-
 const userFile = "users.json"
 
 // Load users from JSON file
@@ -110,7 +109,7 @@ func main() {
 	hashAndStorePassword("bob", "MySafeP@ss2")
 	hashAndStorePassword("charlie", "TopSecret#3")
 
-	fmt.Println("\n🔍 Verifying Passwords:")
+	fmt.Println("\n Verifying Passwords:")
 	verifyPassword("alice", "password123")  
 	verifyPassword("alice", "WrongPass!")    
 	verifyPassword("bob", "MySafeP@ss2")     
