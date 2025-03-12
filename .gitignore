@@ -1,3 +1,8 @@
 /go-tmp
 /q2/*.txt
-/q2/dataset
+/q2/dataset/*
+/q2/mapper_output/*
+/q2/reduce_output/*
+
+/q3/certs/
+/q3/logs/*/*
