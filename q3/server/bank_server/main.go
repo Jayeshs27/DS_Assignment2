@@ -34,25 +34,29 @@ var (
 type Customer struct {
 	CustomerName   string `json:"customer_name"`
 	AccNo   string `json:"acc_no"`
-	CurrBalance       int64 `json:"curr_balance"`
+	CurrBalance       float32 `json:"curr_balance"`
+}
+
+func (c *Customer) SubtractAmount(amount float32){
+	c.CurrBalance -= amount
 }
 
 // PaymentServer struct
 type BankServer struct {
 	pb.UnimplementedBankServiceServer
-	Customers map[string]Customer
+	Customers map[string]*Customer
 }
 
-func loadUsers(filename string) map[string]Customer {
+func loadUsers(filename string) map[string]*Customer {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Bank Server:Failed to read user file: %v", err)
 	}
-	var customers []Customer
+	var customers []*Customer
 	if err := json.Unmarshal(data, &customers); err != nil {
 		log.Fatalf("Bank Server:Failed to parse user data: %v", err)
 	}
-	customerMap := make(map[string]Customer)
+	customerMap := make(map[string]*Customer)
 	for _, customer := range customers {
 		customerMap[customer.AccNo] = customer
 	}
@@ -66,11 +70,27 @@ var (
 func (s *BankServer) CheckBalance(ctx context.Context, req *pb.CheckBalanceRequest) (*pb.CheckBalanceResponse, error) {
 	accNo := req.AccNo
 	customer, exists := bankServer.Customers[accNo]
+	fmt.Printf("check balance request received for acc_no:%s\n", accNo)
 	if !exists {
 		return &pb.CheckBalanceResponse{CurrBalance: 0}, common.ErrInvalidAccountNo
 	}
 	return &pb.CheckBalanceResponse{CurrBalance: customer.CurrBalance}, common.ErrSuccess
 }
+
+func (s *BankServer) DebitBalance(ctx context.Context, req *pb.DebitRequest) (*pb.DebitResponse, error) {
+	accNo := req.AccNo
+	customer, exists := bankServer.Customers[accNo]
+	fmt.Printf("debit balance request received for acc_no:%s\n", accNo)
+	if !exists {
+		return &pb.DebitResponse{}, common.ErrInvalidAccountNo
+	}
+	if customer.CurrBalance < req.Amount{
+		return &pb.DebitResponse{}, common.ErrInsufficientBalance
+	}
+	bankServer.Customers[accNo].SubtractAmount(req.Amount)
+	return &pb.DebitResponse{}, common.ErrSuccess
+}
+
 
 func main() {
 	customers := loadUsers("sample_data/bank_customers.json")
@@ -94,9 +114,6 @@ func main() {
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 	})
 	
-	// serverOpts := []grpc.ServerOption{grpc.Creds(creds)}
-	// serverOpts = append(serverOpts, grpc.UnaryInterceptor(logggingInterceptor))
-	// server := grpc.NewServer(serverOpts...)
 	bSLogger = common.NewLogger("logs/bank_server")
 	defer bSLogger.Close()
 	
@@ -105,6 +122,7 @@ func main() {
 		// grpc.ChainUnaryInterceptor(loggingInterceptor, authInterceptor),
 	)
 	
+	bankServer = &BankServer{Customers: customers}
 	pb.RegisterBankServiceServer(server, &BankServer{Customers: customers})
 
 	listener, err := net.Listen("tcp", bankServerAddr)

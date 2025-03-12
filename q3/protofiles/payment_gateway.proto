@@ -6,6 +6,7 @@ option go_package = "q3/protofiles";
 
 service PaymentService {
   rpc Authenticate(UserCredentials) returns (AuthResponse);
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
   rpc MakePayment(PaymentRequest) returns (PaymentResponse);
 }
 
@@ -13,6 +14,14 @@ service BankService {
   rpc DebitBalance(DebitRequest) returns (DebitResponse);
   rpc CreditBalance(CreditRequest) returns (CreditResponse);
   rpc CheckBalance(CheckBalanceRequest) returns (CheckBalanceResponse);
+}
+
+message GetBalanceRequest{
+  string token = 1;
+}
+
+message GetBalanceResponse{
+  float amount = 1;
 }
 
 message UserCredentials {
@@ -27,8 +36,8 @@ message AuthResponse {
 
 message PaymentRequest {
   string token = 1;
-  string recipient_account = 2;
-  double amount = 3;
+  string respAccNo = 2;
+  float amount = 3;
 }
 
 message PaymentResponse {
@@ -38,18 +47,18 @@ message PaymentResponse {
 
 message DebitRequest {
   string AccNo = 1;
+  float Amount = 2;
 }
 
 message DebitResponse {
-  string status = 1;
 }
 
 message CreditRequest {
   string AccNo = 1;
+  float Amount = 2;
 }
 
 message CreditResponse {
-  string status = 1;
 }
 
 message CheckBalanceRequest {
@@ -57,5 +66,5 @@ message CheckBalanceRequest {
 }
 
 message CheckBalanceResponse {
-  int64 CurrBalance = 1;
+  float CurrBalance = 1;
 }

@@ -26,6 +26,8 @@ const (
 
 var (
 	pgLogger *common.Logger
+	credsForClient credentials.TransportCredentials
+	credsForBankServer credentials.TransportCredentials
 )
 // JWT Secret Key
 var jwtKey = []byte("payment_gatway_key") 
@@ -84,6 +86,55 @@ func (s *PaymentServer) Authenticate(ctx context.Context, req *pb.UserCredential
 	return &pb.AuthResponse{Token: tokenString, Role: user.Role}, common.ErrSuccess
 }
 
+func SendCheckBalanceRequest(accNo string)(float32, error){
+	// Connect to server
+	conn, err := grpc.NewClient(bankServerAddr, 
+								grpc.WithTransportCredentials(credsForBankServer),
+							  	)
+	if err != common.ErrSuccess{
+		return -1, err
+	}
+	client := pb.NewBankServiceClient(conn)
+	resp, err := client.CheckBalance(context.Background(), &pb.CheckBalanceRequest{AccNo: accNo})
+	if err != common.ErrSuccess {
+		return -1, err
+	}
+	defer conn.Close()
+
+	return resp.CurrBalance, common.ErrSuccess
+}
+
+func SendDebitRequest(accNo string, amount float32)(error){
+	// Connect to server
+	conn, err := grpc.NewClient(bankServerAddr, 
+								grpc.WithTransportCredentials(credsForBankServer),
+							  	)
+	if err != common.ErrSuccess{
+		return err
+	}
+	client := pb.NewBankServiceClient(conn)
+	_, err = client.DebitBalance(context.Background(), &pb.DebitRequest{AccNo: accNo, Amount: amount})
+	if err != common.ErrSuccess {
+		return err
+	}
+	defer conn.Close()
+
+	return common.ErrSuccess
+}
+
+// func sendRequestToLoadBalancer(client lbproto.LoadBalancingServiceClient, tasktype int) (string, error){
+// 	req := &lbproto.LoadBalancerRequest{TaskType: int32(tasktype)}
+
+// 	resp, err := client.LoadBalancerRPC(context.Background(), req)
+// 	if err != nil {
+// 		log.Fatalf("Error while calling LoadBalancerRPC: %v", err)
+// 		return "", err
+// 	}
+
+// 	fmt.Println("Response From Load Balancing Server: ", resp.GetBestServer())
+// 	return resp.GetBestServer(), nil
+// }
+
 // Process payment
 func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
 	// Validate JWT token
@@ -96,14 +147,49 @@ func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || claims["role"] != "customer" {
+	if !ok {
+		return nil, common.ErrInvalidToken
+	}else if claims["role"] != "customer" {
 		return nil, common.ErrUnauthorized
 	}
-	
+
+	userName := claims["username"].(string)
+	user := s.users[userName]  // assuming user always exists with give userName
+	_, amount := req.RespAccNo, req.Amount
+	err = SendDebitRequest(user.AccountNo, amount)
+	if err != common.ErrSuccess{
+		return nil, err
+	}
+
 	return &pb.PaymentResponse{
 		Status:  "success",
 		Message: "Payment processed successfully",
 	}, common.ErrSuccess
+}
+
+func (s *PaymentServer) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error){
+
+	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, common.ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, common.ErrInvalidToken
+	}
+	userName := claims["username"].(string)
+	user := s.users[userName]  // assuming user always exists with give userName
+	currBalance, err := SendCheckBalanceRequest(user.AccountNo)
+	if err != common.ErrSuccess{
+		return nil, err
+	}
+	fmt.Printf("Current Balance is %f\n", currBalance)
+
+	return &pb.GetBalanceResponse{Amount: currBalance}, common.ErrSuccess
 }
 
 // func (s *PaymentServer) CheckBalance(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
@@ -145,10 +231,16 @@ func main() {
 	certPool := x509.NewCertPool()
 	certPool.AppendCertsFromPEM(caCert)
 
-	creds := credentials.NewTLS(&tls.Config{
+	credsForClient = credentials.NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientCAs:    certPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
+	})
+
+	credsForBankServer = credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      certPool,
+		ServerName: "localhost",
 	})
 	
 	// serverOpts := []grpc.ServerOption{grpc.Creds(creds)}
@@ -158,7 +250,7 @@ func main() {
 	defer pgLogger.Close()
 	
 	server := grpc.NewServer(
-		grpc.Creds(creds),
+		grpc.Creds(credsForClient),
 		grpc.ChainUnaryInterceptor(loggingInterceptor, authInterceptor),
 	)
 	

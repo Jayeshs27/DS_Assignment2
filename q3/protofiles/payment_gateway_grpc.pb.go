@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	PaymentService_Authenticate_FullMethodName = "/paymentpb.PaymentService/Authenticate"
+	PaymentService_GetBalance_FullMethodName   = "/paymentpb.PaymentService/GetBalance"
 	PaymentService_MakePayment_FullMethodName  = "/paymentpb.PaymentService/MakePayment"
 )
 
@@ -28,6 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PaymentServiceClient interface {
 	Authenticate(ctx context.Context, in *UserCredentials, opts ...grpc.CallOption) (*AuthResponse, error)
+	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error)
 	MakePayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error)
 }
 
@@ -49,6 +51,16 @@ func (c *paymentServiceClient) Authenticate(ctx context.Context, in *UserCredent
 	return out, nil
 }
 
+func (c *paymentServiceClient) GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*GetBalanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetBalanceResponse)
+	err := c.cc.Invoke(ctx, PaymentService_GetBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *paymentServiceClient) MakePayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PaymentResponse)
@@ -64,6 +76,7 @@ func (c *paymentServiceClient) MakePayment(ctx context.Context, in *PaymentReque
 // for forward compatibility.
 type PaymentServiceServer interface {
 	Authenticate(context.Context, *UserCredentials) (*AuthResponse, error)
+	GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error)
 	MakePayment(context.Context, *PaymentRequest) (*PaymentResponse, error)
 	mustEmbedUnimplementedPaymentServiceServer()
 }
@@ -77,6 +90,9 @@ type UnimplementedPaymentServiceServer struct{}
 
 func (UnimplementedPaymentServiceServer) Authenticate(context.Context, *UserCredentials) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authenticate not implemented")
+}
+func (UnimplementedPaymentServiceServer) GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBalance not implemented")
 }
 func (UnimplementedPaymentServiceServer) MakePayment(context.Context, *PaymentRequest) (*PaymentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MakePayment not implemented")
@@ -120,6 +136,24 @@ func _PaymentService_Authenticate_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentService_GetBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).GetBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_GetBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).GetBalance(ctx, req.(*GetBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PaymentService_MakePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PaymentRequest)
 	if err := dec(in); err != nil {
@@ -148,6 +182,10 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Authenticate",
 			Handler:    _PaymentService_Authenticate_Handler,
+		},
+		{
+			MethodName: "GetBalance",
+			Handler:    _PaymentService_GetBalance_Handler,
 		},
 		{
 			MethodName: "MakePayment",

@@ -119,22 +119,43 @@ func main() {
 	}
 
 	fmt.Println("Authenticated! Token:", authResp.Token)
-	
-	// Make Payment
-	var recipient string
-	var amount float64
-	fmt.Print("Enter recipient account: ")
-	fmt.Scanln(&recipient)
-	fmt.Print("Enter amount: ")
-	fmt.Scanln(&amount)
-
-	// authMetadata := fmt.Sprintf("Bearer %s", authResp.Token)
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", authResp.Token))
 
-	payResp, err := client.MakePayment(ctx, &pb.PaymentRequest{Token: authResp.Token, RecipientAccount: recipient, Amount: amount})
-	if err != common.ErrSuccess {
-		log.Fatalf("Payment failed: %v", err)
+	// Make Payment
+	// var recipient string
+	// var amount float32
+	// fmt.Print("Enter recipient account: ")
+	// fmt.Scanln(&recipient)
+	// fmt.Print("Enter amount: ")
+	// fmt.Scanln(&amount)
+	for {
+		var reqType int
+		fmt.Scanln(&reqType)
+		if(reqType > 2 || reqType < 1){
+			log.Println("Invalid reqType")
+		}
+		switch; reqType {
+			case 1:
+				payResp, err := client.GetBalance(ctx, &pb.GetBalanceRequest{Token: authResp.Token})
+				if err != common.ErrSuccess {
+					log.Fatalf("Request Failed: %v", err)
+				}
+				fmt.Printf("Current Balance is %f\n", payResp.Amount)
+				
+			case 2:
+				var respAccNo string
+				var amount float32
+				fmt.Print("Enter recipitent Acc. No.:")
+				fmt.Scanln(&respAccNo)
+				fmt.Print("Enter Amount:")
+				fmt.Scanln(&amount)
+				payResp, err := client.MakePayment(ctx, &pb.PaymentRequest{Token: authResp.Token, RespAccNo: respAccNo, Amount: amount})
+				if err != common.ErrSuccess {
+					log.Fatalf("Payment failed: %v", err)
+				}
+				fmt.Println("Payment Status:", payResp.Status, "- Message:", payResp.Message)
+				
+		}
 	}
-
-	fmt.Println("Payment Status:", payResp.Status, "- Message:", payResp.Message)
+	// authMetadata := fmt.Sprintf("Bearer %s", authResp.Token)
 }
