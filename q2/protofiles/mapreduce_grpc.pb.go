@@ -30,7 +30,7 @@ const (
 type WorkerServiceClient interface {
 	MapRPC(ctx context.Context, in *MapRequest, opts ...grpc.CallOption) (*MapResponse, error)
 	ReduceRPC(ctx context.Context, in *ReduceRequest, opts ...grpc.CallOption) (*ReduceResponse, error)
-	ExitRPC(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	ExitRPC(ctx context.Context, in *ExitRequest, opts ...grpc.CallOption) (*ExitResponse, error)
 }
 
 type workerServiceClient struct {
@@ -61,9 +61,9 @@ func (c *workerServiceClient) ReduceRPC(ctx context.Context, in *ReduceRequest, 
 	return out, nil
 }
 
-func (c *workerServiceClient) ExitRPC(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+func (c *workerServiceClient) ExitRPC(ctx context.Context, in *ExitRequest, opts ...grpc.CallOption) (*ExitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
+	out := new(ExitResponse)
 	err := c.cc.Invoke(ctx, WorkerService_ExitRPC_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (c *workerServiceClient) ExitRPC(ctx context.Context, in *Empty, opts ...gr
 type WorkerServiceServer interface {
 	MapRPC(context.Context, *MapRequest) (*MapResponse, error)
 	ReduceRPC(context.Context, *ReduceRequest) (*ReduceResponse, error)
-	ExitRPC(context.Context, *Empty) (*Empty, error)
+	ExitRPC(context.Context, *ExitRequest) (*ExitResponse, error)
 	mustEmbedUnimplementedWorkerServiceServer()
 }
 
@@ -94,7 +94,7 @@ func (UnimplementedWorkerServiceServer) MapRPC(context.Context, *MapRequest) (*M
 func (UnimplementedWorkerServiceServer) ReduceRPC(context.Context, *ReduceRequest) (*ReduceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReduceRPC not implemented")
 }
-func (UnimplementedWorkerServiceServer) ExitRPC(context.Context, *Empty) (*Empty, error) {
+func (UnimplementedWorkerServiceServer) ExitRPC(context.Context, *ExitRequest) (*ExitResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExitRPC not implemented")
 }
 func (UnimplementedWorkerServiceServer) mustEmbedUnimplementedWorkerServiceServer() {}
@@ -155,7 +155,7 @@ func _WorkerService_ReduceRPC_Handler(srv interface{}, ctx context.Context, dec 
 }
 
 func _WorkerService_ExitRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(ExitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func _WorkerService_ExitRPC_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: WorkerService_ExitRPC_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkerServiceServer).ExitRPC(ctx, req.(*Empty))
+		return srv.(WorkerServiceServer).ExitRPC(ctx, req.(*ExitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

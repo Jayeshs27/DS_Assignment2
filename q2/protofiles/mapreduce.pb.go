@@ -20,165 +20,11 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type Empty struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *Empty) Reset()         { *m = Empty{} }
-func (m *Empty) String() string { return proto.CompactTextString(m) }
-func (*Empty) ProtoMessage()    {}
-func (*Empty) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{0}
-}
-
-func (m *Empty) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Empty.Unmarshal(m, b)
-}
-func (m *Empty) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Empty.Marshal(b, m, deterministic)
-}
-func (m *Empty) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Empty.Merge(m, src)
-}
-func (m *Empty) XXX_Size() int {
-	return xxx_messageInfo_Empty.Size(m)
-}
-func (m *Empty) XXX_DiscardUnknown() {
-	xxx_messageInfo_Empty.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Empty proto.InternalMessageInfo
-
-type MapResult struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *MapResult) Reset()         { *m = MapResult{} }
-func (m *MapResult) String() string { return proto.CompactTextString(m) }
-func (*MapResult) ProtoMessage()    {}
-func (*MapResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{1}
-}
-
-func (m *MapResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_MapResult.Unmarshal(m, b)
-}
-func (m *MapResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_MapResult.Marshal(b, m, deterministic)
-}
-func (m *MapResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MapResult.Merge(m, src)
-}
-func (m *MapResult) XXX_Size() int {
-	return xxx_messageInfo_MapResult.Size(m)
-}
-func (m *MapResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_MapResult.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MapResult proto.InternalMessageInfo
-
-type ReduceResult struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ReduceResult) Reset()         { *m = ReduceResult{} }
-func (m *ReduceResult) String() string { return proto.CompactTextString(m) }
-func (*ReduceResult) ProtoMessage()    {}
-func (*ReduceResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{2}
-}
-
-func (m *ReduceResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ReduceResult.Unmarshal(m, b)
-}
-func (m *ReduceResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ReduceResult.Marshal(b, m, deterministic)
-}
-func (m *ReduceResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReduceResult.Merge(m, src)
-}
-func (m *ReduceResult) XXX_Size() int {
-	return xxx_messageInfo_ReduceResult.Size(m)
-}
-func (m *ReduceResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_ReduceResult.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ReduceResult proto.InternalMessageInfo
-
-type MapResultResponse struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *MapResultResponse) Reset()         { *m = MapResultResponse{} }
-func (m *MapResultResponse) String() string { return proto.CompactTextString(m) }
-func (*MapResultResponse) ProtoMessage()    {}
-func (*MapResultResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{3}
-}
-
-func (m *MapResultResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_MapResultResponse.Unmarshal(m, b)
-}
-func (m *MapResultResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_MapResultResponse.Marshal(b, m, deterministic)
-}
-func (m *MapResultResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MapResultResponse.Merge(m, src)
-}
-func (m *MapResultResponse) XXX_Size() int {
-	return xxx_messageInfo_MapResultResponse.Size(m)
-}
-func (m *MapResultResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MapResultResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MapResultResponse proto.InternalMessageInfo
-
-type ReduceResultResponse struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ReduceResultResponse) Reset()         { *m = ReduceResultResponse{} }
-func (m *ReduceResultResponse) String() string { return proto.CompactTextString(m) }
-func (*ReduceResultResponse) ProtoMessage()    {}
-func (*ReduceResultResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{4}
-}
-
-func (m *ReduceResultResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ReduceResultResponse.Unmarshal(m, b)
-}
-func (m *ReduceResultResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ReduceResultResponse.Marshal(b, m, deterministic)
-}
-func (m *ReduceResultResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReduceResultResponse.Merge(m, src)
-}
-func (m *ReduceResultResponse) XXX_Size() int {
-	return xxx_messageInfo_ReduceResultResponse.Size(m)
-}
-func (m *ReduceResultResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ReduceResultResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ReduceResultResponse proto.InternalMessageInfo
-
 type MapRequest struct {
 	Inputfile            string   `protobuf:"bytes,1,opt,name=inputfile,proto3" json:"inputfile,omitempty"`
 	NumReduce            int32    `protobuf:"varint,2,opt,name=numReduce,proto3" json:"numReduce,omitempty"`
 	MapperId             int32    `protobuf:"varint,3,opt,name=mapperId,proto3" json:"mapperId,omitempty"`
+	TaskType             int32    `protobuf:"varint,4,opt,name=taskType,proto3" json:"taskType,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -188,7 +34,7 @@ func (m *MapRequest) Reset()         { *m = MapRequest{} }
 func (m *MapRequest) String() string { return proto.CompactTextString(m) }
 func (*MapRequest) ProtoMessage()    {}
 func (*MapRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{5}
+	return fileDescriptor_e758f9057fa6d460, []int{0}
 }
 
 func (m *MapRequest) XXX_Unmarshal(b []byte) error {
@@ -230,9 +76,17 @@ func (m *MapRequest) GetMapperId() int32 {
 	return 0
 }
 
+func (m *MapRequest) GetTaskType() int32 {
+	if m != nil {
+		return m.TaskType
+	}
+	return 0
+}
+
 type ReduceRequest struct {
 	ReducerId            int32    `protobuf:"varint,1,opt,name=reducerId,proto3" json:"reducerId,omitempty"`
 	NumMappers           int32    `protobuf:"varint,2,opt,name=numMappers,proto3" json:"numMappers,omitempty"`
+	TaskType             int32    `protobuf:"varint,3,opt,name=taskType,proto3" json:"taskType,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -242,7 +96,7 @@ func (m *ReduceRequest) Reset()         { *m = ReduceRequest{} }
 func (m *ReduceRequest) String() string { return proto.CompactTextString(m) }
 func (*ReduceRequest) ProtoMessage()    {}
 func (*ReduceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{6}
+	return fileDescriptor_e758f9057fa6d460, []int{1}
 }
 
 func (m *ReduceRequest) XXX_Unmarshal(b []byte) error {
@@ -277,6 +131,199 @@ func (m *ReduceRequest) GetNumMappers() int32 {
 	return 0
 }
 
+func (m *ReduceRequest) GetTaskType() int32 {
+	if m != nil {
+		return m.TaskType
+	}
+	return 0
+}
+
+type ExitRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExitRequest) Reset()         { *m = ExitRequest{} }
+func (m *ExitRequest) String() string { return proto.CompactTextString(m) }
+func (*ExitRequest) ProtoMessage()    {}
+func (*ExitRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e758f9057fa6d460, []int{2}
+}
+
+func (m *ExitRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExitRequest.Unmarshal(m, b)
+}
+func (m *ExitRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExitRequest.Marshal(b, m, deterministic)
+}
+func (m *ExitRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExitRequest.Merge(m, src)
+}
+func (m *ExitRequest) XXX_Size() int {
+	return xxx_messageInfo_ExitRequest.Size(m)
+}
+func (m *ExitRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExitRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExitRequest proto.InternalMessageInfo
+
+type ExitResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExitResponse) Reset()         { *m = ExitResponse{} }
+func (m *ExitResponse) String() string { return proto.CompactTextString(m) }
+func (*ExitResponse) ProtoMessage()    {}
+func (*ExitResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e758f9057fa6d460, []int{3}
+}
+
+func (m *ExitResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExitResponse.Unmarshal(m, b)
+}
+func (m *ExitResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExitResponse.Marshal(b, m, deterministic)
+}
+func (m *ExitResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExitResponse.Merge(m, src)
+}
+func (m *ExitResponse) XXX_Size() int {
+	return xxx_messageInfo_ExitResponse.Size(m)
+}
+func (m *ExitResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExitResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExitResponse proto.InternalMessageInfo
+
+type MapResult struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MapResult) Reset()         { *m = MapResult{} }
+func (m *MapResult) String() string { return proto.CompactTextString(m) }
+func (*MapResult) ProtoMessage()    {}
+func (*MapResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e758f9057fa6d460, []int{4}
+}
+
+func (m *MapResult) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MapResult.Unmarshal(m, b)
+}
+func (m *MapResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MapResult.Marshal(b, m, deterministic)
+}
+func (m *MapResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MapResult.Merge(m, src)
+}
+func (m *MapResult) XXX_Size() int {
+	return xxx_messageInfo_MapResult.Size(m)
+}
+func (m *MapResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_MapResult.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MapResult proto.InternalMessageInfo
+
+type ReduceResult struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ReduceResult) Reset()         { *m = ReduceResult{} }
+func (m *ReduceResult) String() string { return proto.CompactTextString(m) }
+func (*ReduceResult) ProtoMessage()    {}
+func (*ReduceResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e758f9057fa6d460, []int{5}
+}
+
+func (m *ReduceResult) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ReduceResult.Unmarshal(m, b)
+}
+func (m *ReduceResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ReduceResult.Marshal(b, m, deterministic)
+}
+func (m *ReduceResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReduceResult.Merge(m, src)
+}
+func (m *ReduceResult) XXX_Size() int {
+	return xxx_messageInfo_ReduceResult.Size(m)
+}
+func (m *ReduceResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReduceResult.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ReduceResult proto.InternalMessageInfo
+
+type MapResultResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MapResultResponse) Reset()         { *m = MapResultResponse{} }
+func (m *MapResultResponse) String() string { return proto.CompactTextString(m) }
+func (*MapResultResponse) ProtoMessage()    {}
+func (*MapResultResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e758f9057fa6d460, []int{6}
+}
+
+func (m *MapResultResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MapResultResponse.Unmarshal(m, b)
+}
+func (m *MapResultResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MapResultResponse.Marshal(b, m, deterministic)
+}
+func (m *MapResultResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MapResultResponse.Merge(m, src)
+}
+func (m *MapResultResponse) XXX_Size() int {
+	return xxx_messageInfo_MapResultResponse.Size(m)
+}
+func (m *MapResultResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MapResultResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MapResultResponse proto.InternalMessageInfo
+
+type ReduceResultResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ReduceResultResponse) Reset()         { *m = ReduceResultResponse{} }
+func (m *ReduceResultResponse) String() string { return proto.CompactTextString(m) }
+func (*ReduceResultResponse) ProtoMessage()    {}
+func (*ReduceResultResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e758f9057fa6d460, []int{7}
+}
+
+func (m *ReduceResultResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ReduceResultResponse.Unmarshal(m, b)
+}
+func (m *ReduceResultResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ReduceResultResponse.Marshal(b, m, deterministic)
+}
+func (m *ReduceResultResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReduceResultResponse.Merge(m, src)
+}
+func (m *ReduceResultResponse) XXX_Size() int {
+	return xxx_messageInfo_ReduceResultResponse.Size(m)
+}
+func (m *ReduceResultResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReduceResultResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ReduceResultResponse proto.InternalMessageInfo
+
 type MapResponse struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -287,7 +334,7 @@ func (m *MapResponse) Reset()         { *m = MapResponse{} }
 func (m *MapResponse) String() string { return proto.CompactTextString(m) }
 func (*MapResponse) ProtoMessage()    {}
 func (*MapResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{7}
+	return fileDescriptor_e758f9057fa6d460, []int{8}
 }
 
 func (m *MapResponse) XXX_Unmarshal(b []byte) error {
@@ -318,7 +365,7 @@ func (m *ReduceResponse) Reset()         { *m = ReduceResponse{} }
 func (m *ReduceResponse) String() string { return proto.CompactTextString(m) }
 func (*ReduceResponse) ProtoMessage()    {}
 func (*ReduceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e758f9057fa6d460, []int{8}
+	return fileDescriptor_e758f9057fa6d460, []int{9}
 }
 
 func (m *ReduceResponse) XXX_Unmarshal(b []byte) error {
@@ -340,13 +387,14 @@ func (m *ReduceResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_ReduceResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*Empty)(nil), "mapreduce.Empty")
+	proto.RegisterType((*MapRequest)(nil), "mapreduce.MapRequest")
+	proto.RegisterType((*ReduceRequest)(nil), "mapreduce.ReduceRequest")
+	proto.RegisterType((*ExitRequest)(nil), "mapreduce.ExitRequest")
+	proto.RegisterType((*ExitResponse)(nil), "mapreduce.ExitResponse")
 	proto.RegisterType((*MapResult)(nil), "mapreduce.MapResult")
 	proto.RegisterType((*ReduceResult)(nil), "mapreduce.ReduceResult")
 	proto.RegisterType((*MapResultResponse)(nil), "mapreduce.MapResultResponse")
 	proto.RegisterType((*ReduceResultResponse)(nil), "mapreduce.ReduceResultResponse")
-	proto.RegisterType((*MapRequest)(nil), "mapreduce.MapRequest")
-	proto.RegisterType((*ReduceRequest)(nil), "mapreduce.ReduceRequest")
 	proto.RegisterType((*MapResponse)(nil), "mapreduce.MapResponse")
 	proto.RegisterType((*ReduceResponse)(nil), "mapreduce.ReduceResponse")
 }
@@ -356,28 +404,29 @@ func init() {
 }
 
 var fileDescriptor_e758f9057fa6d460 = []byte{
-	// 353 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0x5f, 0x4f, 0xf2, 0x30,
-	0x14, 0xc6, 0xb3, 0xf7, 0x0d, 0xe0, 0x0e, 0x0c, 0xb0, 0x20, 0xce, 0x85, 0x28, 0xd9, 0x15, 0x37,
-	0x42, 0x82, 0x17, 0xde, 0x1a, 0x16, 0x2e, 0x8c, 0x21, 0x59, 0xc6, 0x85, 0x89, 0x77, 0xfc, 0xa9,
-	0xc9, 0x22, 0xdb, 0xca, 0xda, 0x1a, 0xfd, 0x42, 0x7e, 0x07, 0xbf, 0x9d, 0x69, 0x3b, 0xda, 0x21,
-	0x78, 0xb7, 0xfe, 0x9e, 0xd3, 0xe7, 0x9c, 0x67, 0xa7, 0xe0, 0x91, 0x3c, 0x63, 0xd9, 0x6b, 0xbc,
-	0xc5, 0x74, 0x9c, 0x2c, 0x49, 0x8e, 0x37, 0x7c, 0x8d, 0x47, 0x12, 0x22, 0x5b, 0x03, 0xbf, 0x06,
-	0x95, 0x59, 0x42, 0xd8, 0xa7, 0x5f, 0x07, 0x7b, 0xbe, 0x24, 0x11, 0xa6, 0x7c, 0xcb, 0xfc, 0x26,
-	0x34, 0x22, 0xa9, 0x17, 0xe7, 0x0e, 0x9c, 0x6b, 0x31, 0xc2, 0x94, 0x64, 0x29, 0xc5, 0x7e, 0x0f,
-	0xba, 0xe5, 0x22, 0xcd, 0x37, 0x00, 0xb2, 0x78, 0xc7, 0x31, 0x65, 0xa8, 0x0f, 0x76, 0x9c, 0x12,
-	0xce, 0xc4, 0x24, 0xae, 0x35, 0xb0, 0x86, 0x76, 0x64, 0x80, 0x50, 0x53, 0x9e, 0x28, 0x1b, 0xf7,
-	0xdf, 0xc0, 0x1a, 0x56, 0x22, 0x03, 0x90, 0x07, 0x67, 0xc9, 0x92, 0x10, 0x9c, 0x3f, 0x6e, 0xdc,
-	0xff, 0x52, 0xd4, 0x67, 0x7f, 0x0e, 0xce, 0xbe, 0xbb, 0x6e, 0xa4, 0x32, 0x89, 0x6a, 0x4b, 0x59,
-	0x69, 0x80, 0xae, 0x01, 0x52, 0x9e, 0xcc, 0xe5, 0x6d, 0x5a, 0x74, 0x2a, 0x11, 0xdf, 0x81, 0xba,
-	0x4a, 0xa8, 0x32, 0xb4, 0xa1, 0xa9, 0xb3, 0x49, 0x32, 0xf9, 0xb6, 0xc0, 0x79, 0xce, 0xf2, 0x37,
-	0x9c, 0x2f, 0x70, 0xfe, 0x1e, 0xaf, 0x31, 0xba, 0x87, 0xaa, 0xb8, 0x12, 0x06, 0xe8, 0x62, 0x64,
-	0xfe, 0xb0, 0x89, 0xee, 0xf5, 0x7e, 0x63, 0x65, 0x85, 0x1e, 0xc0, 0x2e, 0xcc, 0xc3, 0x00, 0xb9,
-	0xa5, 0xa2, 0x83, 0x40, 0xde, 0xd5, 0x09, 0xa5, 0x70, 0xb8, 0x85, 0xda, 0xec, 0x23, 0x66, 0xe2,
-	0x7e, 0xbb, 0x54, 0x25, 0x37, 0xe9, 0x1d, 0x91, 0xc9, 0x97, 0x05, 0x9d, 0x05, 0x5f, 0x25, 0x31,
-	0x53, 0xab, 0xda, 0x27, 0x98, 0x42, 0xc3, 0xac, 0x35, 0x0c, 0x50, 0xf7, 0x68, 0x60, 0xbe, 0x65,
-	0x5e, 0xff, 0x14, 0xd5, 0xa3, 0x3c, 0x41, 0xeb, 0xe0, 0x15, 0x84, 0x01, 0xba, 0x3c, 0x35, 0xb8,
-	0x70, 0xba, 0xf9, 0x43, 0xd8, 0x9b, 0x4d, 0x5b, 0x2f, 0xce, 0x6e, 0x32, 0x36, 0x2f, 0x77, 0x55,
-	0x95, 0xdf, 0x77, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x92, 0xaa, 0xd3, 0x0b, 0xce, 0x02, 0x00,
-	0x00,
+	// 377 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x93, 0xcd, 0x4e, 0xea, 0x40,
+	0x14, 0xc7, 0xd3, 0xcb, 0xbd, 0x5c, 0x7b, 0xa0, 0xa0, 0x03, 0x42, 0x6d, 0x88, 0x92, 0xae, 0x58,
+	0x41, 0x82, 0x0b, 0x13, 0x57, 0x86, 0xc6, 0x85, 0x31, 0x24, 0x4d, 0x31, 0x31, 0x71, 0x57, 0x60,
+	0x4c, 0x1a, 0xfa, 0x31, 0x74, 0x66, 0x8c, 0xee, 0x7c, 0x1a, 0x1f, 0xc5, 0xe7, 0x32, 0x9d, 0x69,
+	0xa7, 0xe5, 0xc3, 0x5d, 0xcf, 0xef, 0x7f, 0xce, 0xff, 0x7c, 0x4c, 0x0a, 0x16, 0x49, 0x13, 0x96,
+	0xbc, 0x06, 0x21, 0xa6, 0x93, 0xc8, 0x27, 0x29, 0x5e, 0xf3, 0x15, 0x1e, 0x0b, 0x88, 0x74, 0x05,
+	0xec, 0x4f, 0x0d, 0x60, 0xee, 0x13, 0x0f, 0x6f, 0x39, 0xa6, 0x0c, 0x0d, 0x40, 0x0f, 0x62, 0xc2,
+	0x59, 0x56, 0x67, 0x6a, 0x43, 0x6d, 0xa4, 0x7b, 0x25, 0xc8, 0xd4, 0x98, 0x47, 0x9e, 0xa8, 0x34,
+	0xff, 0x0c, 0xb5, 0xd1, 0x3f, 0xaf, 0x04, 0xc8, 0x82, 0x93, 0xc8, 0x27, 0x04, 0xa7, 0x0f, 0x6b,
+	0xb3, 0x26, 0x44, 0x15, 0x67, 0x1a, 0xf3, 0xe9, 0xe6, 0xe9, 0x83, 0x60, 0xf3, 0xaf, 0xd4, 0x8a,
+	0xd8, 0x0e, 0xc0, 0x90, 0x0e, 0x95, 0x21, 0xe4, 0x74, 0x99, 0x93, 0x26, 0xdb, 0x28, 0x80, 0x2e,
+	0x01, 0x62, 0x1e, 0xcd, 0x85, 0x33, 0xcd, 0xa7, 0xa8, 0x90, 0x9d, 0x56, 0xb5, 0xbd, 0x56, 0x06,
+	0x34, 0xee, 0xdf, 0x03, 0x96, 0x37, 0xb2, 0x5b, 0xd0, 0x94, 0x21, 0x25, 0x49, 0x4c, 0xb1, 0xdd,
+	0x00, 0x5d, 0xdc, 0x82, 0xf2, 0x50, 0x88, 0xc5, 0x58, 0x22, 0xee, 0xc0, 0x99, 0x12, 0x55, 0x45,
+	0x0f, 0xba, 0xd5, 0x24, 0xc5, 0x0d, 0x68, 0xc8, 0x64, 0x19, 0x9e, 0x42, 0x4b, 0xa5, 0x09, 0x32,
+	0xfd, 0xd6, 0xc0, 0x78, 0x4e, 0xd2, 0x0d, 0x4e, 0x17, 0x38, 0x7d, 0x0b, 0x56, 0x18, 0xdd, 0x40,
+	0x3d, 0x2b, 0x71, 0x1d, 0x74, 0x3e, 0x2e, 0x1f, 0xac, 0x7c, 0x1b, 0xab, 0xb7, 0x8f, 0xa5, 0x15,
+	0xba, 0x03, 0x3d, 0x37, 0x77, 0x1d, 0x64, 0x56, 0x92, 0x76, 0xae, 0x6a, 0x5d, 0x1c, 0x51, 0x72,
+	0x87, 0x5b, 0xf8, 0x2f, 0xee, 0xe0, 0x3a, 0xa8, 0xda, 0xa4, 0x72, 0x2a, 0xab, 0x7f, 0xc0, 0xf3,
+	0x45, 0xbe, 0x34, 0xe8, 0x2c, 0xf8, 0x32, 0x12, 0x88, 0x87, 0xac, 0x58, 0x67, 0x06, 0xcd, 0xf2,
+	0x5c, 0xae, 0x83, 0xba, 0x07, 0xd3, 0xf3, 0x90, 0x59, 0x83, 0x63, 0x54, 0xcd, 0xf5, 0x08, 0xed,
+	0x9d, 0xeb, 0xba, 0x0e, 0xea, 0x1f, 0xdb, 0x22, 0x73, 0xba, 0xfa, 0x45, 0x28, 0xcc, 0x66, 0xed,
+	0x17, 0x63, 0x3b, 0x9d, 0x94, 0x7f, 0xc5, 0xb2, 0x2e, 0xbe, 0xaf, 0x7f, 0x02, 0x00, 0x00, 0xff,
+	0xff, 0x13, 0xfd, 0xc0, 0xdf, 0x2a, 0x03, 0x00, 0x00,
 }

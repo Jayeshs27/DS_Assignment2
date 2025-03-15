@@ -7,19 +7,33 @@ option go_package = "q2/protofiles";
 service WorkerService {
     rpc MapRPC (MapRequest) returns (MapResponse);
     rpc ReduceRPC (ReduceRequest) returns (ReduceResponse);
-    rpc ExitRPC (Empty) returns (Empty);
+    rpc ExitRPC (ExitRequest) returns (ExitResponse);
 }
-
-// service RegisterWorkerService {
-//     rpc RegisterRPC (RegisterRequest) returns (RegisterResponse);
-// } 
 
 service SubmitResultService {
     rpc MapResultRPC (MapResult) returns (MapResultResponse);
     rpc ReduceResultRPC (ReduceResult) returns (ReduceResultResponse);
+    // rpc RegisterRPC (RegisterRequest) returns (RegisterResponse);
 }
 
-message Empty{}
+message MapRequest {
+    string inputfile = 1;
+    int32 numReduce = 2;
+    int32 mapperId = 3;
+    int32 taskType = 4;
+}
+
+message ReduceRequest {
+    int32 reducerId = 1;
+    int32 numMappers = 2;
+    int32 taskType = 3;
+}
+
+message ExitRequest {
+}
+
+message ExitResponse {
+}
 
 message MapResult {
 }
@@ -33,28 +47,18 @@ message MapResultResponse {
 message ReduceResultResponse {
 }
 
-// message RegisterRequest {
-//     string serverAddr = 1;
-// }
-
-// message RegisterResponse {}
-
-message MapRequest {
-    string inputfile = 1;
-    int32 numReduce = 2;
-    int32 mapperId = 3;
-}
-
-message ReduceRequest {
-    int32 reducerId = 1;
-    int32 numMappers = 2;
-}
 
 message MapResponse {
 }
+
 message ReduceResponse {
 }
 
+// message RegisterRequest {
+// }
+
+// message RegisterResponse {
+// }
 
 
 

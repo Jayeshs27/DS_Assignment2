@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	// "go/scanner"
 	"log"
 	"net"
-	"sync"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	mapReducepb "q2/protofiles"
@@ -18,9 +19,15 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+type TaskType int
+
+const (
+	COUNT_FREQUENCY TaskType = 0
+	INVERTED_INDEX TaskType = 1
+)
+
 const (
 	masterServerAddr = "localhost:50411"
-	baseWorkerPort   = 23000 // Base port for workers
 )
 
 func getAvailablePort() (int, error) {
@@ -57,56 +64,67 @@ func NewMasterServer(totalMappers int, totalReducers int) *MasterServer {
 	}
 }
 
-func (s *MasterServer) MapResultRPC(ctx context.Context, req *mapReducepb.MapResult) (*mapReducepb.MapResultResponse, error) {
-	s.mu.Lock()
-	s.mapCounter++
-	log.Printf("Master - Received Map task completion (%d/%d)", s.mapCounter, s.totalMappers)
-
-	// Only mark Map phase as done when all Mappers finish
-	if s.mapCounter == s.totalMappers {
-		s.mapDone <- true
-		log.Println("Master - All Map tasks completed, proceeding to Reduce phase")
+func sendMapRequest(workerAddr string, filePath string, numReduce int, id int, tasktype TaskType){
+	conn, err := grpc.NewClient(workerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to worker %d: %v", id, err)
 	}
-	s.mu.Unlock()
+	defer conn.Close()
+	client := mapReducepb.NewWorkerServiceClient(conn)
 
-	return &mapReducepb.MapResultResponse{}, nil
+	log.Printf("Master - Sending Map request to Worker %d", id)
+	_, err = client.MapRPC(context.Background(), &mapReducepb.MapRequest{
+		Inputfile: filePath,
+		NumReduce: int32(numReduce),
+		MapperId:  int32(id),
+		TaskType: int32(tasktype),
+	})
+	if err != nil {
+		log.Fatalf("Failed to send Map request to Worker %d: %v", id, err)
+	}
 }
 
-func (s *MasterServer) ReduceResultRPC(ctx context.Context, req *mapReducepb.ReduceResult) (*mapReducepb.ReduceResultResponse, error) {
-	s.mu.Lock()
-	s.reduceCounter++
-	log.Printf("Master - Received Reduce task completion (%d/%d)", s.reduceCounter, s.totalReducers)
-
-	// Only mark Reduce phase as done when all Reducers finish
-	if s.reduceCounter == s.totalReducers {
-		s.reduceDone <- true
-		log.Println("Master - All Reduce tasks completed, MapReduce Job Done!")
+func sendReduceRequest(workerAddr string, numMappers int, id int, tasktype TaskType){
+	conn, err := grpc.NewClient(workerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to worker for Reduce task %d: %v", id, err)
 	}
-	s.mu.Unlock()
+	defer conn.Close()
+	client := mapReducepb.NewWorkerServiceClient(conn)
 
-	return &mapReducepb.ReduceResultResponse{}, nil
+	log.Printf("Master - Sending Reduce request to Worker %d", id)
+	_, err = client.ReduceRPC(context.Background(), &mapReducepb.ReduceRequest{
+		NumMappers: int32(numMappers),
+		ReducerId:  int32(id),
+		TaskType: int32(tasktype),
+	})
+	if err != nil {
+		log.Fatalf("Failed to send Reduce request to Worker %d: %v", id, err)
+	}
 }
 
 func main() {
-	// Ensure correct usage
 	if len(os.Args) < 3 {
 		log.Fatalf("Invalid Arguments, Usage: go run master.go <data-directory> <numReduce>")
 	}
-
-	// Get directory and numReduce from command-line arguments
 	directory := os.Args[1]
 	numReduce, err := strconv.Atoi(os.Args[2])
+
 	if err != nil {
 		log.Fatalf("Invalid number of reducers: %v", err)
 	}
-
-	// Read files from the directory
 	files, err := os.ReadDir(directory)
 	if err != nil {
 		log.Fatalf("Failed to read directory: %v", err)
 	}
 
-	// Start the gRPC master server
+	var taskType int
+	fmt.Print("Enter Task Type(0-Count Word Frequency, 1-Inverted Index):")
+	fmt.Scan(&taskType)
+	if taskType > 2 || taskType < 0 {
+		fmt.Println("Invalid taskType, Usage: enter 0 for count frequency, 1 for inverted index")
+	}
+
 	listener, err := net.Listen("tcp", masterServerAddr)
 	if err != nil {
 		log.Fatalf("Master Server Failed to listen: %v", err)
@@ -117,28 +135,24 @@ func main() {
 	mapReducepb.RegisterSubmitResultServiceServer(grpcServer, master)
 
 	log.Println("Master Server is running on", masterServerAddr)
-
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {
 			log.Fatalf("Master Server Failed to serve: %v", err)
 		}
 	}()
 
-	// Start workers for each input file
 	workerPorts := make([]int, len(files))
 	for i, file := range files {
 		if file.IsDir() {
-			continue // Skip directories
+			continue 
 		}
-		// Get an available port for the worker
 		workerPort, err := getAvailablePort()
 		if err != nil {
 			log.Fatalf("Failed to get Free port %v",err)
 		}
 		workerPorts[i] = workerPort
 
-		// Start worker process
-		cmd := exec.Command("go", "run", "worker/main.go", strconv.Itoa(workerPort))
+		cmd := exec.Command("go", "run", "./worker", strconv.Itoa(workerPort))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err = cmd.Start()
@@ -149,49 +163,33 @@ func main() {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	// Connect to workers and assign Map tasks
+	// TODO here wait for mapper to iniatized 
+
 	for i, file := range files {
 		if file.IsDir() {
 			continue
 		}
-
 		filePath := filepath.Join(directory, file.Name())
 		workerAddr := fmt.Sprintf("localhost:%d", workerPorts[i])
-		conn, err := grpc.NewClient(workerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Fatalf("Failed to connect to worker %d: %v", i, err)
-		}
-		defer conn.Close()
-		client := mapReducepb.NewWorkerServiceClient(conn)
-
-		log.Printf("Master - Sending Map request to Worker %d", i)
-		_, err = client.MapRPC(context.Background(), &mapReducepb.MapRequest{
-			Inputfile: filePath,
-			NumReduce: int32(numReduce),
-			MapperId:  int32(i),
-		})
-		if err != nil {
-			log.Fatalf("Failed to send Map request to Worker %d: %v", i, err)
-		}
+		sendMapRequest(workerAddr, filePath, numReduce, i, TaskType(taskType))
 	}
 
-	// // Wait for all Map tasks to complete
 	log.Println("Waiting for Mapper...")
 	<-master.mapDone
-	// Determine the number of reducers to spawn
+
 	numMappers := len(files)
 	numReducers := numReduce
 	if numReducers > numMappers {
 		extraWorkers := numReducers - numMappers
 		log.Printf("Spawning %d extra workers for reducers", extraWorkers)
-		for i := 0; i < extraWorkers; i++ {
+		for i := range extraWorkers{
 			workerPort, err := getAvailablePort()
 			if err != nil {
 				log.Fatalf("Failed to get free port: %v", err)
 			}
 			workerPorts = append(workerPorts, workerPort)
-
-			cmd := exec.Command("go", "run", "worker.go", strconv.Itoa(workerPort))
+	
+			cmd := exec.Command("go", "run", "./worker", strconv.Itoa(workerPort))
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			err = cmd.Start()
@@ -203,26 +201,11 @@ func main() {
 		}
 	}
 
-	// // Connect to workers and assign Reduce tasks
-	for i := 0; i < numReducers; i++ {
-		workerAddr := fmt.Sprintf("localhost:%d", workerPorts[i%numMappers])
-		conn, err := grpc.NewClient(workerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Fatalf("Failed to connect to worker for Reduce task %d: %v", i, err)
-		}
-		defer conn.Close()
-		client := mapReducepb.NewWorkerServiceClient(conn)
-
-		log.Printf("Master - Sending Reduce request to Worker %d", i)
-		_, err = client.ReduceRPC(context.Background(), &mapReducepb.ReduceRequest{
-			NumMappers: int32(numMappers),
-			ReducerId:  int32(i),
-		})
-		if err != nil {
-			log.Fatalf("Failed to send Reduce request to Worker %d: %v", i, err)
-		}
+	for i := range numReducers {
+		workerAddr := fmt.Sprintf("localhost:%d", workerPorts[i % numMappers])
+		sendReduceRequest(workerAddr, numMappers, i, TaskType(taskType))
 	}
-	// Wait for all Reduce tasks to complete
+
 	log.Println("Waiting for Reducer...")
 	<-master.reduceDone
 
@@ -238,12 +221,9 @@ func main() {
 		defer conn.Close()
 	
 		client := mapReducepb.NewWorkerServiceClient(conn)
-		_, err = client.ExitRPC(context.Background(), &mapReducepb.Empty{})
+		_, err = client.ExitRPC(context.Background(), &mapReducepb.ExitRequest{})
 		if err != nil {
 			log.Printf("Failed to shut down worker %s: %v", workerAddr, err)
 		} 
-		// else {
-		// 	log.Printf("Worker %s shut down successfully", workerAddr)
-		// }
 	}
 }
