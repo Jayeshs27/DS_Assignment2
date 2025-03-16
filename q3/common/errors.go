@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+
 var (
 	ErrSuccess error = nil
 	ErrUnauthorized = errors.New("error: unauthorized")
@@ -13,4 +14,6 @@ var (
 	ErrInvalidToken = errors.New("error: invalid token")
 	ErrInsufficientBalance = errors.New("error: insufficient balance to complete transaction")
 	ErrBankServerAlreadyExist = errors.New("error: bank server already exists")
+	ErrInvalidUserName = errors.New("error: invalid user name")
+	ErrTransactionInProgress = errors.New("error: transaction in progress")
 )

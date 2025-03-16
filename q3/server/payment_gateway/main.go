@@ -96,7 +96,7 @@ func SendCheckBalanceRequest(bankAddr string, accNo string)(float32, error){
 	return resp.CurrBalance, common.ErrSuccess
 }
 
-func SendDebitRequest(bankAddr string, accNo string, amount float32)(error){
+func SendDebitRequest(bankAddr string, accNo string, amount float32, txID string)(error){
 	// Connect to server
 	conn, err := grpc.NewClient(bankAddr, 
 								grpc.WithTransportCredentials(credsForBankServer),
@@ -105,7 +105,7 @@ func SendDebitRequest(bankAddr string, accNo string, amount float32)(error){
 		return err
 	}
 	client := pb.NewBankServiceClient(conn)
-	_, err = client.DebitBalance(context.Background(), &pb.DebitRequest{AccNo: accNo, Amount: amount})
+	_, err = client.DebitBalance(context.Background(), &pb.DebitRequest{AccNo: accNo, Amount: amount, TransID: txID})
 	if err != common.ErrSuccess {
 		return err
 	}
@@ -114,7 +114,7 @@ func SendDebitRequest(bankAddr string, accNo string, amount float32)(error){
 	return common.ErrSuccess
 }
 
-func SendCreditRequest(bankAddr string, accNo string, amount float32)(error){
+func SendCreditRequest(bankAddr string, accNo string, amount float32, txID string)(error){
 	// Connect to server
 	conn, err := grpc.NewClient(bankAddr, 
 								grpc.WithTransportCredentials(credsForBankServer),
@@ -123,7 +123,7 @@ func SendCreditRequest(bankAddr string, accNo string, amount float32)(error){
 		return err
 	}
 	client := pb.NewBankServiceClient(conn)
-	_, err = client.CreditBalance(context.Background(), &pb.CreditRequest{AccNo: accNo, Amount: amount})
+	_, err = client.CreditBalance(context.Background(), &pb.CreditRequest{AccNo: accNo, Amount: amount, TransID: txID})
 	if err != common.ErrSuccess {
 		return err
 	}

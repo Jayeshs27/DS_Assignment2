@@ -61,6 +61,8 @@ func (c *Customer) AddAmount(amount float32){
 type BankServer struct {
 	pb.UnimplementedBankServiceServer
 	Customers map[string]*Customer
+	DebitTransactions map[string]error
+	CreditTransactions map[string]error
 	bankName string
 	bankServerAddr string
 }
@@ -74,6 +76,8 @@ func NewBankServer(bankName string)(*BankServer, error){
 	return &BankServer{
 		Customers: customers,
 		bankName: bankName,
+		CreditTransactions: make(map[string]error),
+		DebitTransactions: make(map[string]error),
 		bankServerAddr: fmt.Sprintf("localhost:%d",port),
 	}, common.ErrSuccess
 }

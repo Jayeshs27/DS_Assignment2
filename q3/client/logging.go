@@ -5,18 +5,26 @@ import (
 	// "log"
 	// "os"
 	// "sync"
-	// "time"
+	"errors"
+	"fmt"
+	"q3/common"
+	"time"
+
 	// "bufio"
 	"context"
+
 	"google.golang.org/grpc"
 )
 
+var (
+	maxRetries = 3
+	timeoutInterval = 5
+)
 // Global variables for logging
 // var (
 // 	logFile  *os.File
 // 	logMutex sync.Mutex // Ensures thread-safe writes
 // )
-
 
 // Initialize logging (Creates a new file per session)
 // type Logger struct {
@@ -61,15 +69,43 @@ import (
 // 	}
 // }
 
-func loggingInterceptor(ctx context.Context, method string, req, reply any,  cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (error) {
-	clientLogger.PrintLog("Request: %v", req)
-	err := invoker(ctx, method, req, reply, cc, opts...)
-    if err != nil {
-        clientLogger.PrintLog("RPC failed with error: %v", err)
+func loggingInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+    timeout := time.Duration(timeoutInterval) * time.Second 
+    var err error
+    for i := range maxRetries {
+        retryCtx, cancel := context.WithTimeout(ctx, timeout)
+        defer cancel() 
+
+        startTime := time.Now()
+        clientLogger.PrintLog("Attempt %d - Request: %v", i+1, req)
+
+        err = invoker(retryCtx, method, req, reply, cc, opts...)
+        elapsed := time.Since(startTime)
+
+        if err == common.ErrSuccess {
+            clientLogger.PrintLog("Response: %v", reply)
+            clientLogger.PrintLog("RPC Call Succeeded in %v", elapsed)
+            return common.ErrSuccess
+        }
+		
+		if i == maxRetries -1 {
+			clientLogger.PrintLog("RPC Call Failed after %d attempts", maxRetries)
+			return err
+		}
+
+        if errors.Is(retryCtx.Err(), context.DeadlineExceeded) {
+			clientLogger.PrintLog("Request Timeout (Attempt %d): Server taking too long | Retrying ..", i+1)
+		} else {
+			fmt.Println("error - ", err)
+            clientLogger.PrintLog("RPC failed (Attempt %d) with error: %v", i+1, err)
+			return err
+        }
+
+        time.Sleep(time.Duration(i + 1) * time.Second)
     }
-	// printLog("Response: %s", reply)
     return err
 }
+
 
 // func unaryInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 // 	var credsConfigured bool

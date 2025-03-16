@@ -37,38 +37,69 @@ func (s *PaymentServer) Authenticate(ctx context.Context, req *pb.UserCredential
 	return &pb.AuthResponse{Token: tokenString, Role: user.Role}, common.ErrSuccess
 }
 
-// Process payment
-func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
-	// Validate JWT token
-	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
+func checkTokenValidity(reqToken string) (jwt.MapClaims, error){
+	token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
-
 	if err != nil || !token.Valid {
-		return nil, common.ErrInvalidToken
+		return  nil, common.ErrInvalidToken
 	}
-
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, common.ErrInvalidToken
-	}else if claims["role"] != "customer" {
+	} else if claims["role"] != "customer" {
 		return nil, common.ErrUnauthorized
 	}
+	return claims, common.ErrSuccess	
+}
 
+func (s *PaymentServer) checkUserValidity(claims jwt.MapClaims)(User, error){
 	userName := claims["username"].(string)
-	user := s.Users[userName]  // assuming user always exists with give userName
-	bankAddr := s.BankServers[user.BankName]
-	_, amount := req.RecpAccNo, req.Amount
-	err = SendDebitRequest(bankAddr, user.AccountNo, amount)
+	user, exists := s.Users[userName] 
+	if !exists {
+		return User{}, common.ErrInvalidUserName
+	}
+	return user, common.ErrSuccess
+}
+
+func (s *PaymentServer) checkBankValidity(bankName string)(string, error){
+	bankAddr, exists := s.BankServers[bankName]
+	if !exists {
+		return "", common.ErrInvalidBankId
+	}
+	return bankAddr, common.ErrSuccess
+}
+
+// Process payment
+func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
+	// Validate JWT token
+	claims, err := checkTokenValidity(req.Token)
+	if err != common.ErrSuccess {
+		return nil, err
+	}
+	user, err := pgServer.checkUserValidity(claims)
+	if err != common.ErrSuccess {
+		return nil, err
+	}
+	bankAddr, err := pgServer.checkBankValidity(user.BankName)
+	if err != common.ErrSuccess {
+		return nil, err
+	}
+	recpBankAddr, err := pgServer.checkBankValidity(req.RecpBankName)
+	if err != common.ErrSuccess {
+		return nil, err
+	}
+	_, amount, txId := req.RecpAccNo, req.Amount, req.TransID
+	err = SendDebitRequest(bankAddr, user.AccountNo, amount, txId)
 	if err != common.ErrSuccess{
 		return nil, err
 	}
-	recpBankAddr := s.BankServers[req.RecpBankName]
-	err = SendCreditRequest(recpBankAddr, req.RecpAccNo, amount)
+	err = SendCreditRequest(recpBankAddr, req.RecpAccNo, amount, txId)
 	if err != common.ErrSuccess{
 		return nil, err
 	}
-	// not sending credit request for transaction (for now)
+
+	// time.Sleep(5 * time.Second)
 	return &pb.PaymentResponse{
 		Status:  "success",
 		Message: "Payment processed successfully",
@@ -76,28 +107,23 @@ func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest)
 }
 
 func (s *PaymentServer) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error){
-
-	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		return nil, common.ErrInvalidToken
+	claims, err := checkTokenValidity(req.Token)
+	if err != common.ErrSuccess {
+		return nil, err
 	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, common.ErrInvalidToken
+	user, err := pgServer.checkUserValidity(claims)
+	if err != common.ErrSuccess {
+		return nil, err
 	}
-	userName := claims["username"].(string)
-	user := s.Users[userName]  // assuming user always exists with give userName
-	bankAddr := s.BankServers[user.BankName]
+	bankAddr, err := pgServer.checkBankValidity(user.BankName)
+	if err != common.ErrSuccess {
+		return nil, err
+	}
 	currBalance, err := SendCheckBalanceRequest(bankAddr, user.AccountNo)
 	if err != common.ErrSuccess{
 		return nil, err
 	}
 	fmt.Printf("Current Balance is %f\n", currBalance)
-
 	return &pb.GetBalanceResponse{Amount: currBalance}, common.ErrSuccess
 }
 

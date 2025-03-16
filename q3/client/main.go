@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	// "time"
+	// "errors"
 	// "github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc/metadata"
 	// "golang.org/x/crypto/bcrypt"
@@ -14,15 +16,16 @@ import (
 	common "q3/common"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"github.com/google/uuid"
 )
 
 type PaymentServer struct {
 	pb.UnimplementedPaymentServiceServer
 }
 
-
 var (
 	clientLogger *common.Logger
+	paymentGatewayAddr = "localhost:45301"
 )
 
 func main() {
@@ -48,7 +51,7 @@ func main() {
 	clientLogger = common.NewLogger("logs/client")
 	defer clientLogger.Close()
 	// Connect to server
-	conn, err := grpc.NewClient("localhost:45301", 
+	conn, err := grpc.NewClient(paymentGatewayAddr, 
 								grpc.WithTransportCredentials(creds),
 							  	grpc.WithUnaryInterceptor(loggingInterceptor))
 	if err != nil {
@@ -72,9 +75,12 @@ func main() {
 
 	fmt.Println("Authenticated! Token:", authResp.Token)
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", authResp.Token))
+	// ctx, cancel := context.WithTimeout(ctx,  5 * time.Second)
+	// defer cancel()
 
 	for {
 		var reqType int
+		fmt.Printf("Enter Request Type:")
 		fmt.Scanln(&reqType)
 		if(reqType > 2 || reqType < 1){
 			log.Println("Invalid reqType")
@@ -83,11 +89,12 @@ func main() {
 			case 1:
 				payResp, err := client.GetBalance(ctx, &pb.GetBalanceRequest{Token: authResp.Token})
 				if err != common.ErrSuccess {
-					log.Fatalf("Request Failed: %v", err)
+					log.Printf("Request Failed: %v", err)
+				} else {
+					fmt.Printf("Current Balance is %f\n", payResp.Amount)
 				}
-				fmt.Printf("Current Balance is %f\n", payResp.Amount)
 				
-			case 2:
+			case 2:   // to do - check timeout for makepayment
 				var recpAccNo, recpBankName string
 				var amount float32
 				fmt.Print("Enter recipitent Bank Name:")
@@ -96,13 +103,14 @@ func main() {
 				fmt.Scanln(&recpAccNo)
 				fmt.Print("Enter Amount:")
 				fmt.Scanln(&amount)
-				req := &pb.PaymentRequest{Token: authResp.Token, RecpBankName:recpBankName, RecpAccNo: recpAccNo, Amount: amount}
+				transID := uuid.New().String()
+				req := &pb.PaymentRequest{Token: authResp.Token, RecpBankName:recpBankName, RecpAccNo: recpAccNo, Amount: amount, TransID: transID}
 				payResp, err := client.MakePayment(ctx, req)
 				if err != common.ErrSuccess {
-					log.Fatalf("Payment failed: %v", err)
+					log.Printf("Payment failed: %v", err)
+				} else{
+					fmt.Println("Payment Status:", payResp.Status, "- Message:", payResp.Message)
 				}
-				fmt.Println("Payment Status:", payResp.Status, "- Message:", payResp.Message)
-				
 		}
 	}
 }
