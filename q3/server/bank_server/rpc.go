@@ -21,6 +21,7 @@ import (
 
 var (
 	maxAcquireAttempts = 3
+	AdditionalDelay = 0
 )
 
 
@@ -62,12 +63,12 @@ func (s *BankServer) acquireAccountLock(accNo string)(bool){
 	cust := s.Customers[accNo]
 	for i := range maxAcquireAttempts {
 		if !cust.checkAndAcquire(){
-			log.Printf("lock acquired successfully")
+			log.Printf("account No.%s, lock acquired", accNo)
 			return true;
 		}
 		time.Sleep(time.Duration((i + 1) * 100) * time.Millisecond)
 	}
-	log.Printf("lock acquired")
+	log.Printf("account No.%s, can't acquire lock", accNo)
 	return false
 }
 
@@ -77,7 +78,7 @@ func (s *BankServer) PrepareTransaction(ctx context.Context, req *pb.PrepareRequ
 	if !common.IsEqual(err, common.ErrSuccess){
 		return nil, err
 	}
-	time.Sleep(5 * time.Second)
+	// time.Sleep(5 * time.Second)
 	if !s.acquireAccountLock(req.AccNo) {   // check and acquires account lock
 		return nil, common.ErrBankServerBusy
 	}
@@ -114,6 +115,10 @@ func (s *BankServer) DebitBalance(ctx context.Context, req *pb.CommitRequest) (*
 	// 	return &pb.CommitResponse{}, status
 	// }
 	// bankServer.DebitTransactions[txId] = common.ErrTransactionInProgress
+
+	// Addition delay to simulate timeouts (to check idopotency feature)
+	time.Sleep(time.Duration(AdditionalDelay) * time.Second)
+	/////////////////
 	s.Customers[req.AccNo].subtractAmount(req.Amount)
 	// bankServer.DebitTransactions[txId] = status
 	return &pb.CommitResponse{}, common.ErrSuccess

@@ -18,7 +18,7 @@ var (
 )
 
 
-func loggingInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func ClientRequestInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
     timeout := time.Duration(timeoutInterval) * time.Second 
     var err error
     for i := range maxRetries {
