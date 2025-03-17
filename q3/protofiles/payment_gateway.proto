@@ -12,9 +12,39 @@ service PaymentService {
 }
 
 service BankService {
-  rpc DebitBalance(DebitRequest) returns (DebitResponse);
-  rpc CreditBalance(CreditRequest) returns (CreditResponse);
+  // rpc DebitBalance(DebitRequest) returns (DebitResponse);
+  // rpc CreditBalance(CreditRequest) returns (CreditResponse);
   rpc CheckBalance(CheckBalanceRequest) returns (CheckBalanceResponse);
+  rpc PrepareTransaction(PrepareRequest) returns (PrepareResponse);
+  rpc CommitTransaction(CommitRequest) returns (CommitResponse);
+  rpc ReleaseResource(ReleaseRequest) returns (ReleaseResponse);
+} 
+
+message ReleaseRequest {
+  string AccNo = 1;
+}
+
+message ReleaseResponse {
+}
+
+message PrepareRequest {
+  int32 ReqType = 4;
+  string AccNo = 1;
+  float Amount = 2;
+  string transID = 3;
+}
+
+message PrepareResponse {
+}
+
+message CommitRequest {
+  int32 ReqType = 4;
+  string AccNo = 1;
+  float Amount = 2;
+  string transID = 3;
+}
+
+message CommitResponse {
 }
 
 message RegisterRequest{
@@ -57,23 +87,6 @@ message PaymentResponse {
   string message = 2;
 }
 
-message DebitRequest {
-  string AccNo = 1;
-  float Amount = 2;
-  string transID = 3;
-}
-
-message DebitResponse {
-}
-
-message CreditRequest {
-  string AccNo = 1;
-  float Amount = 2;
-  string transID = 3;
-}
-
-message CreditResponse {
-}
 
 message CheckBalanceRequest {
   string AccNo = 1;
@@ -82,3 +95,21 @@ message CheckBalanceRequest {
 message CheckBalanceResponse {
   float CurrBalance = 1;
 }
+
+// message DebitRequest {
+//   string AccNo = 1;
+//   float Amount = 2;
+//   string transID = 3;
+// }
+
+// message DebitResponse {
+// }
+
+// message CreditRequest {
+//   string AccNo = 1;
+//   float Amount = 2;
+//   string transID = 3;
+// }
+
+// message CreditResponse {
+// }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"log"
 	"net"
+	"sync"
 	// "time"
 
 	// "golang.org/x/crypto/bcrypt"
@@ -23,14 +24,6 @@ const (
 	paymentGatewayAddr = "localhost:45301"
 )
 
-var (
-	pgLogger *common.Logger
-	credsForClient credentials.TransportCredentials
-	credsForBankServer credentials.TransportCredentials
-)
-// JWT Secret Key
-var jwtKey = []byte("payment_gatway_key") 
-
 // User struct
 type User struct {
 	Username   string `json:"username"`
@@ -39,26 +32,30 @@ type User struct {
 	AccountNo  string `json:"account_no"`
 	BankName   string `json:"bank_name"`
 }
-
 // PaymentServer struct
 type PaymentServer struct {
 	pb.UnimplementedPaymentServiceServer
 	Users map[string]User
 	BankServers map[string]string
+	UserTransactions map[string]error
+	bankListmutex sync.Mutex
+	TransListmutex sync.Mutex
 }
 
 var (
+	jwtKey = []byte("payment_gatway_key") 
 	pgServer *PaymentServer
+	pgLogger *common.Logger
+	credsForClient credentials.TransportCredentials
+	credsForBankServer credentials.TransportCredentials
 )
 
 func NewPaymentServer()(*PaymentServer, error) {
 	users := loadUsers("sample_data/pg_users.json")
-	// if err != common.ErrSuccess {
-	// 	return &PaymentServer{}, err
-	// }
 	return &PaymentServer{
 		Users: users,
 		BankServers: make(map[string]string),
+		UserTransactions: make(map[string]error),
 	}, common.ErrSuccess
 }
 
@@ -79,7 +76,6 @@ func loadUsers(filename string) map[string]User {
 }
 
 func SendCheckBalanceRequest(bankAddr string, accNo string)(float32, error){
-	// Connect to server
 	conn, err := grpc.NewClient(bankAddr, 
 								grpc.WithTransportCredentials(credsForBankServer),
 							  	)
@@ -96,42 +92,39 @@ func SendCheckBalanceRequest(bankAddr string, accNo string)(float32, error){
 	return resp.CurrBalance, common.ErrSuccess
 }
 
-func SendDebitRequest(bankAddr string, accNo string, amount float32, txID string)(error){
-	// Connect to server
-	conn, err := grpc.NewClient(bankAddr, 
-								grpc.WithTransportCredentials(credsForBankServer),
-							  	)
-	if err != common.ErrSuccess{
-		return err
-	}
-	client := pb.NewBankServiceClient(conn)
-	_, err = client.DebitBalance(context.Background(), &pb.DebitRequest{AccNo: accNo, Amount: amount, TransID: txID})
-	if err != common.ErrSuccess {
-		return err
-	}
-	defer conn.Close()
+// func SendDebitRequest(bankAddr string, accNo string, amount float32, txID string)(error){
+// 	conn, err := grpc.NewClient(bankAddr, 
+// 								grpc.WithTransportCredentials(credsForBankServer),
+// 							  	)
+// 	if err != common.ErrSuccess{
+// 		return err
+// 	}
+// 	client := pb.NewBankServiceClient(conn)
+// 	_, err = client.DebitBalance(context.Background(), &pb.DebitRequest{AccNo: accNo, Amount: amount, TransID: txID})
+// 	if err != common.ErrSuccess {
+// 		return err
+// 	}
+// 	defer conn.Close()
 
-	return common.ErrSuccess
-}
+// 	return common.ErrSuccess
+// }
 
-func SendCreditRequest(bankAddr string, accNo string, amount float32, txID string)(error){
-	// Connect to server
-	conn, err := grpc.NewClient(bankAddr, 
-								grpc.WithTransportCredentials(credsForBankServer),
-							  	)
-	if err != common.ErrSuccess{
-		return err
-	}
-	client := pb.NewBankServiceClient(conn)
-	_, err = client.CreditBalance(context.Background(), &pb.CreditRequest{AccNo: accNo, Amount: amount, TransID: txID})
-	if err != common.ErrSuccess {
-		return err
-	}
-	defer conn.Close()
+// func SendCreditRequest(bankAddr string, accNo string, amount float32, txID string)(error){
+// 	conn, err := grpc.NewClient(bankAddr, 
+// 								grpc.WithTransportCredentials(credsForBankServer),
+// 							  	)
+// 	if err != common.ErrSuccess{
+// 		return err
+// 	}
+// 	client := pb.NewBankServiceClient(conn)
+// 	_, err = client.CreditBalance(context.Background(), &pb.CreditRequest{AccNo: accNo, Amount: amount, TransID: txID})
+// 	if err != common.ErrSuccess {
+// 		return err
+// 	}
+// 	defer conn.Close()
 
-	return common.ErrSuccess
-}
-
+// 	return common.ErrSuccess
+// }
 
 
 func main() {
@@ -168,13 +161,13 @@ func main() {
 		grpc.ChainUnaryInterceptor(pgLoggingInterceptor, authInterceptor),
 	)
 	pgServer, err = NewPaymentServer()
-	if err != common.ErrSuccess {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to create payment Gateway: %v", err)
 	}
 	pb.RegisterPaymentServiceServer(server, pgServer)
 
 	listener, err := net.Listen("tcp", paymentGatewayAddr)
-	if err != common.ErrSuccess {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 

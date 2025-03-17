@@ -6,7 +6,7 @@ import (
 	// "os"
 	// "sync"
 	"errors"
-	"fmt"
+	// "fmt"
 	"q3/common"
 	"time"
 
@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	maxRetries = 3
+	maxRetries = 5
 	timeoutInterval = 5
 )
 // Global variables for logging
@@ -82,21 +82,20 @@ func loggingInterceptor(ctx context.Context, method string, req, reply any, cc *
         err = invoker(retryCtx, method, req, reply, cc, opts...)
         elapsed := time.Since(startTime)
 
-        if err == common.ErrSuccess {
+        if errors.Is(err, common.ErrSuccess) {
             clientLogger.PrintLog("Response: %v", reply)
             clientLogger.PrintLog("RPC Call Succeeded in %v", elapsed)
             return common.ErrSuccess
         }
 		
-		if i == maxRetries -1 {
+		if i == maxRetries - 1 {
 			clientLogger.PrintLog("RPC Call Failed after %d attempts", maxRetries)
 			return err
 		}
-
-        if errors.Is(retryCtx.Err(), context.DeadlineExceeded) {
+		
+        if common.IsEqual(retryCtx.Err(), context.DeadlineExceeded) || common.IsEqual(err, common.ErrTransactionInProgress) {
 			clientLogger.PrintLog("Request Timeout (Attempt %d): Server taking too long | Retrying ..", i+1)
 		} else {
-			fmt.Println("error - ", err)
             clientLogger.PrintLog("RPC failed (Attempt %d) with error: %v", i+1, err)
 			return err
         }

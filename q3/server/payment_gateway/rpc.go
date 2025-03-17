@@ -3,14 +3,23 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc"
+
 	// "google.golang.org/grpc"
 	// "google.golang.org/grpc/credentials"
-	pb "q3/protofiles"
 	common "q3/common"
+	pb "q3/protofiles"
+)
+
+type RequestType int 
+var (
+	creditRequest RequestType = 0
+	debitRequest RequestType = 1
 )
 
 
@@ -37,23 +46,33 @@ func (s *PaymentServer) Authenticate(ctx context.Context, req *pb.UserCredential
 	return &pb.AuthResponse{Token: tokenString, Role: user.Role}, common.ErrSuccess
 }
 
-func checkTokenValidity(reqToken string) (jwt.MapClaims, error){
+// func checkTokenValidity(reqToken string) (jwt.MapClaims, error){
+// 	token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
+// 		return jwtKey, nil
+// 	})
+// 	if err != nil || !token.Valid {
+// 		return  nil, common.ErrInvalidToken
+// 	}
+// 	claims, ok := token.Claims.(jwt.MapClaims)
+// 	if !ok {
+// 		return nil, common.ErrInvalidToken
+// 	} else if claims["role"] != "customer" {
+// 		return nil, common.ErrUnauthorized
+// 	}
+// 	return claims, common.ErrSuccess	
+// }
+
+func (s *PaymentServer) checkUserValidity(reqToken string)(User, error){
 	token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil || !token.Valid {
-		return  nil, common.ErrInvalidToken
+		panic(common.ErrInvalidToken)
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, common.ErrInvalidToken
-	} else if claims["role"] != "customer" {
-		return nil, common.ErrUnauthorized
+		panic(common.ErrInvalidToken)
 	}
-	return claims, common.ErrSuccess	
-}
-
-func (s *PaymentServer) checkUserValidity(claims jwt.MapClaims)(User, error){
 	userName := claims["username"].(string)
 	user, exists := s.Users[userName] 
 	if !exists {
@@ -70,70 +89,171 @@ func (s *PaymentServer) checkBankValidity(bankName string)(string, error){
 	return bankAddr, common.ErrSuccess
 }
 
+func (s *PaymentServer) checkAndUpdateTranscation(txId string)(bool, error){
+	s.TransListmutex.Lock()
+	defer s.TransListmutex.Unlock()
+	status, exists := s.UserTransactions[txId] 
+	if exists {
+		if status == common.ErrTransactionInProgress || status  == common.ErrSuccess {
+			return false, status
+		}
+	}
+	s.UserTransactions[txId] = common.ErrTransactionInProgress
+	return true, status
+}
+
+func (s *PaymentServer) UpdateTransaction(txId string, status error){
+	s.TransListmutex.Lock()
+	s.UserTransactions[txId] = status
+	s.TransListmutex.Unlock()
+}
+
 // Process payment
 func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
-	// Validate JWT token
-	claims, err := checkTokenValidity(req.Token)
-	if err != common.ErrSuccess {
+	user, err := pgServer.checkUserValidity(req.Token)
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	user, err := pgServer.checkUserValidity(claims)
-	if err != common.ErrSuccess {
+	_, err = pgServer.checkBankValidity(user.BankName)
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	bankAddr, err := pgServer.checkBankValidity(user.BankName)
-	if err != common.ErrSuccess {
+	_, err = pgServer.checkBankValidity(req.RecpBankName)
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	recpBankAddr, err := pgServer.checkBankValidity(req.RecpBankName)
-	if err != common.ErrSuccess {
+	log.Printf("Received payment request %s, %s\n", user.BankName, req.RecpBankName)
+	// log.Println(s.BankServers)
+	ok, status := pgServer.checkAndUpdateTranscation(req.TransID)
+	if !ok {
+		return nil, status
+	}
+	err = s.sendPrepare(req, user)
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	_, amount, txId := req.RecpAccNo, req.Amount, req.TransID
-	err = SendDebitRequest(bankAddr, user.AccountNo, amount, txId)
-	if err != common.ErrSuccess{
+	err = s.sendCommit(req, user)
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	err = SendCreditRequest(recpBankAddr, req.RecpAccNo, amount, txId)
-	if err != common.ErrSuccess{
-		return nil, err
-	}
-
-	// time.Sleep(5 * time.Second)
-	return &pb.PaymentResponse{
-		Status:  "success",
-		Message: "Payment processed successfully",
-	}, common.ErrSuccess
+	pgServer.UpdateTransaction(req.TransID, common.ErrSuccess)
+	return nil, common.ErrSuccess
 }
 
 func (s *PaymentServer) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error){
-	claims, err := checkTokenValidity(req.Token)
-	if err != common.ErrSuccess {
-		return nil, err
-	}
-	user, err := pgServer.checkUserValidity(claims)
-	if err != common.ErrSuccess {
+	// claims, err := checkTokenValidity(req.Token)
+	// if !common.IsEqual(err, common.ErrSuccess) {
+	// 	return nil, err
+	// }
+	user, err := pgServer.checkUserValidity(req.Token)
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
 	bankAddr, err := pgServer.checkBankValidity(user.BankName)
-	if err != common.ErrSuccess {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
+	log.Printf("Sending check balance request...\n")
 	currBalance, err := SendCheckBalanceRequest(bankAddr, user.AccountNo)
-	if err != common.ErrSuccess{
+	if !common.IsEqual(err, common.ErrSuccess){
 		return nil, err
 	}
-	fmt.Printf("Current Balance is %f\n", currBalance)
 	return &pb.GetBalanceResponse{Amount: currBalance}, common.ErrSuccess
 }
 
 func (s *PaymentServer) BankServerDiscovery(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error){
 	bankName, bankAddr := req.BankName, req.BankServerAddr
+	s.bankListmutex.Lock()
+	defer s.bankListmutex.Unlock()
 	_, exists := s.BankServers[bankName]
 	if exists {
 		return nil, common.ErrBankServerAlreadyExist
 	}
 	s.BankServers[bankName] = bankAddr
-	fmt.Printf("Bank server-%s, Addr-%s, registered Sucessfully!\n", bankName, bankAddr)
+	log.Printf("Bank server-%s, Addr-%s, registered Sucessfully!\n", bankName, bankAddr)
 	return &pb.RegisterResponse{}, common.ErrSuccess
+}
+
+func (s *PaymentServer) sendPrepareRequest(reqType RequestType, bankAddr string, accNo string, amount float32, txID string)(error){
+	conn, err := grpc.NewClient(bankAddr, 
+		grpc.WithTransportCredentials(credsForBankServer),
+	)
+	if !common.IsEqual(err, common.ErrSuccess){
+		return err
+	}
+	client := pb.NewBankServiceClient(conn)
+	_, err = client.PrepareTransaction(context.Background(), &pb.PrepareRequest{ReqType: int32(reqType), AccNo: accNo, Amount: amount, TransID: txID})
+	if !common.IsEqual(err, common.ErrSuccess) {
+		return err
+	}
+	defer conn.Close()
+	return common.ErrSuccess
+}
+
+func (s *PaymentServer) sendCommitRequest(reqType RequestType, bankAddr string, accNo string, amount float32, txID string)(error){
+	conn, err := grpc.NewClient(bankAddr, 
+								grpc.WithTransportCredentials(credsForBankServer),
+							  	)
+	if !common.IsEqual(err, common.ErrSuccess){
+		return err
+	}
+	client := pb.NewBankServiceClient(conn)
+	defer conn.Close()
+	_, err = client.CommitTransaction(context.Background(), &pb.CommitRequest{ReqType: int32(reqType), 
+														AccNo: accNo, Amount: amount, TransID: txID})
+	if !common.IsEqual(err, common.ErrSuccess) {
+		return err
+	}
+	return common.ErrSuccess
+}
+
+func (s *PaymentServer) sendReleaseResourceRequest(bankAddr string, accNo string)(error){
+	conn, err := grpc.NewClient(bankAddr, 
+								grpc.WithTransportCredentials(credsForBankServer),
+							  	)
+	if !common.IsEqual(err, common.ErrSuccess){
+		return err
+	}
+	client := pb.NewBankServiceClient(conn)
+	defer conn.Close()
+	_, err = client.ReleaseResource(context.Background(), &pb.ReleaseRequest{AccNo: accNo})
+	if !common.IsEqual(err, common.ErrSuccess) {
+		return err
+	}
+	return common.ErrSuccess
+}
+
+func (s *PaymentServer) sendPrepare(req *pb.PaymentRequest, user User)(error){
+	log.Printf("Sending prepare transaction request...\n")
+	senderBankAddr := s.BankServers[user.BankName]
+	senderAccNo := user.AccountNo
+	recpAccNo, amount, txId:= req.RecpAccNo, req.Amount, req.TransID
+	recpBankAddr := s.BankServers[req.RecpBankName]
+	err := s.sendPrepareRequest(debitRequest, senderBankAddr, senderAccNo, amount, txId)
+	if !common.IsEqual(err, common.ErrSuccess) {
+		return err
+	}
+	err = s.sendPrepareRequest(creditRequest, recpBankAddr, recpAccNo, amount, txId)
+	if !common.IsEqual(err, common.ErrSuccess) {
+		s.sendReleaseResourceRequest(senderBankAddr, senderAccNo)
+		return err
+	}
+	return common.ErrSuccess
+}
+
+func (s *PaymentServer) sendCommit(req *pb.PaymentRequest, user User)(error){
+	log.Printf("Sending commit transaction request...\n")
+	senderBankAddr := s.BankServers[user.BankName]
+	senderAccNo := user.AccountNo
+	recpAccNo, amount, txId:= req.RecpAccNo, req.Amount, req.TransID
+	recpBankAddr := s.BankServers[req.RecpBankName]
+	err := s.sendCommitRequest(debitRequest, senderBankAddr, senderAccNo, amount, txId)
+	if !common.IsEqual(err, common.ErrSuccess) {
+		return err
+	}
+	err = s.sendCommitRequest(creditRequest, recpBankAddr, recpAccNo, amount, txId)
+	if !common.IsEqual(err, common.ErrSuccess) {
+		return err
+	}
+	return common.ErrSuccess
 }

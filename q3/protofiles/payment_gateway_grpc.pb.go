@@ -235,18 +235,22 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	BankService_DebitBalance_FullMethodName  = "/paymentpb.BankService/DebitBalance"
-	BankService_CreditBalance_FullMethodName = "/paymentpb.BankService/CreditBalance"
-	BankService_CheckBalance_FullMethodName  = "/paymentpb.BankService/CheckBalance"
+	BankService_CheckBalance_FullMethodName       = "/paymentpb.BankService/CheckBalance"
+	BankService_PrepareTransaction_FullMethodName = "/paymentpb.BankService/PrepareTransaction"
+	BankService_CommitTransaction_FullMethodName  = "/paymentpb.BankService/CommitTransaction"
+	BankService_ReleaseResource_FullMethodName    = "/paymentpb.BankService/ReleaseResource"
 )
 
 // BankServiceClient is the client API for BankService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BankServiceClient interface {
-	DebitBalance(ctx context.Context, in *DebitRequest, opts ...grpc.CallOption) (*DebitResponse, error)
-	CreditBalance(ctx context.Context, in *CreditRequest, opts ...grpc.CallOption) (*CreditResponse, error)
+	// rpc DebitBalance(DebitRequest) returns (DebitResponse);
+	// rpc CreditBalance(CreditRequest) returns (CreditResponse);
 	CheckBalance(ctx context.Context, in *CheckBalanceRequest, opts ...grpc.CallOption) (*CheckBalanceResponse, error)
+	PrepareTransaction(ctx context.Context, in *PrepareRequest, opts ...grpc.CallOption) (*PrepareResponse, error)
+	CommitTransaction(ctx context.Context, in *CommitRequest, opts ...grpc.CallOption) (*CommitResponse, error)
+	ReleaseResource(ctx context.Context, in *ReleaseRequest, opts ...grpc.CallOption) (*ReleaseResponse, error)
 }
 
 type bankServiceClient struct {
@@ -255,26 +259,6 @@ type bankServiceClient struct {
 
 func NewBankServiceClient(cc grpc.ClientConnInterface) BankServiceClient {
 	return &bankServiceClient{cc}
-}
-
-func (c *bankServiceClient) DebitBalance(ctx context.Context, in *DebitRequest, opts ...grpc.CallOption) (*DebitResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DebitResponse)
-	err := c.cc.Invoke(ctx, BankService_DebitBalance_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *bankServiceClient) CreditBalance(ctx context.Context, in *CreditRequest, opts ...grpc.CallOption) (*CreditResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreditResponse)
-	err := c.cc.Invoke(ctx, BankService_CreditBalance_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *bankServiceClient) CheckBalance(ctx context.Context, in *CheckBalanceRequest, opts ...grpc.CallOption) (*CheckBalanceResponse, error) {
@@ -287,13 +271,46 @@ func (c *bankServiceClient) CheckBalance(ctx context.Context, in *CheckBalanceRe
 	return out, nil
 }
 
+func (c *bankServiceClient) PrepareTransaction(ctx context.Context, in *PrepareRequest, opts ...grpc.CallOption) (*PrepareResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PrepareResponse)
+	err := c.cc.Invoke(ctx, BankService_PrepareTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bankServiceClient) CommitTransaction(ctx context.Context, in *CommitRequest, opts ...grpc.CallOption) (*CommitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommitResponse)
+	err := c.cc.Invoke(ctx, BankService_CommitTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bankServiceClient) ReleaseResource(ctx context.Context, in *ReleaseRequest, opts ...grpc.CallOption) (*ReleaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseResponse)
+	err := c.cc.Invoke(ctx, BankService_ReleaseResource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BankServiceServer is the server API for BankService service.
 // All implementations must embed UnimplementedBankServiceServer
 // for forward compatibility.
 type BankServiceServer interface {
-	DebitBalance(context.Context, *DebitRequest) (*DebitResponse, error)
-	CreditBalance(context.Context, *CreditRequest) (*CreditResponse, error)
+	// rpc DebitBalance(DebitRequest) returns (DebitResponse);
+	// rpc CreditBalance(CreditRequest) returns (CreditResponse);
 	CheckBalance(context.Context, *CheckBalanceRequest) (*CheckBalanceResponse, error)
+	PrepareTransaction(context.Context, *PrepareRequest) (*PrepareResponse, error)
+	CommitTransaction(context.Context, *CommitRequest) (*CommitResponse, error)
+	ReleaseResource(context.Context, *ReleaseRequest) (*ReleaseResponse, error)
 	mustEmbedUnimplementedBankServiceServer()
 }
 
@@ -304,14 +321,17 @@ type BankServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedBankServiceServer struct{}
 
-func (UnimplementedBankServiceServer) DebitBalance(context.Context, *DebitRequest) (*DebitResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DebitBalance not implemented")
-}
-func (UnimplementedBankServiceServer) CreditBalance(context.Context, *CreditRequest) (*CreditResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreditBalance not implemented")
-}
 func (UnimplementedBankServiceServer) CheckBalance(context.Context, *CheckBalanceRequest) (*CheckBalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckBalance not implemented")
+}
+func (UnimplementedBankServiceServer) PrepareTransaction(context.Context, *PrepareRequest) (*PrepareResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareTransaction not implemented")
+}
+func (UnimplementedBankServiceServer) CommitTransaction(context.Context, *CommitRequest) (*CommitResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommitTransaction not implemented")
+}
+func (UnimplementedBankServiceServer) ReleaseResource(context.Context, *ReleaseRequest) (*ReleaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseResource not implemented")
 }
 func (UnimplementedBankServiceServer) mustEmbedUnimplementedBankServiceServer() {}
 func (UnimplementedBankServiceServer) testEmbeddedByValue()                     {}
@@ -334,42 +354,6 @@ func RegisterBankServiceServer(s grpc.ServiceRegistrar, srv BankServiceServer) {
 	s.RegisterService(&BankService_ServiceDesc, srv)
 }
 
-func _BankService_DebitBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DebitRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BankServiceServer).DebitBalance(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BankService_DebitBalance_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BankServiceServer).DebitBalance(ctx, req.(*DebitRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BankService_CreditBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreditRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BankServiceServer).CreditBalance(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BankService_CreditBalance_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BankServiceServer).CreditBalance(ctx, req.(*CreditRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _BankService_CheckBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckBalanceRequest)
 	if err := dec(in); err != nil {
@@ -388,6 +372,60 @@ func _BankService_CheckBalance_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BankService_PrepareTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BankServiceServer).PrepareTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BankService_PrepareTransaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BankServiceServer).PrepareTransaction(ctx, req.(*PrepareRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BankService_CommitTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BankServiceServer).CommitTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BankService_CommitTransaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BankServiceServer).CommitTransaction(ctx, req.(*CommitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BankService_ReleaseResource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BankServiceServer).ReleaseResource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BankService_ReleaseResource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BankServiceServer).ReleaseResource(ctx, req.(*ReleaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BankService_ServiceDesc is the grpc.ServiceDesc for BankService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -396,16 +434,20 @@ var BankService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*BankServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "DebitBalance",
-			Handler:    _BankService_DebitBalance_Handler,
-		},
-		{
-			MethodName: "CreditBalance",
-			Handler:    _BankService_CreditBalance_Handler,
-		},
-		{
 			MethodName: "CheckBalance",
 			Handler:    _BankService_CheckBalance_Handler,
+		},
+		{
+			MethodName: "PrepareTransaction",
+			Handler:    _BankService_PrepareTransaction_Handler,
+		},
+		{
+			MethodName: "CommitTransaction",
+			Handler:    _BankService_CommitTransaction_Handler,
+		},
+		{
+			MethodName: "ReleaseResource",
+			Handler:    _BankService_ReleaseResource_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

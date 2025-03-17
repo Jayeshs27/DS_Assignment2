@@ -23,10 +23,36 @@ type PaymentServer struct {
 	pb.UnimplementedPaymentServiceServer
 }
 
+type RequestType int
+
+var (
+	balanceEnquiry RequestType = 1
+	makePayment RequestType = 2
+	exit        RequestType = 3
+)
+
 var (
 	clientLogger *common.Logger
 	paymentGatewayAddr = "localhost:45301"
 )
+
+func sendGetBalanceRequest(ctx context.Context, client pb.PaymentServiceClient, authToken string)(float64, error){
+	payResp, err := client.GetBalance(ctx, &pb.GetBalanceRequest{Token: authToken})
+	if common.IsEqual(err, common.ErrSuccess) {
+		return float64(payResp.Amount), common.ErrSuccess
+	}
+	return 0, err
+}
+
+func sendPaymentRequest(ctx context.Context, client pb.PaymentServiceClient, amount float32, recpAccNo string, recpBankName string, authToken string) (error){
+	if amount < 0 {
+		return common.ErrInvalidAmount
+	}
+	transID := uuid.New().String()
+	req := &pb.PaymentRequest{Token: authToken, RecpBankName:recpBankName, RecpAccNo: recpAccNo, Amount: amount, TransID: transID}
+	_, err := client.MakePayment(ctx, req)
+	return err
+}
 
 func main() {
 	// Load TLS credentials
@@ -75,26 +101,25 @@ func main() {
 
 	fmt.Println("Authenticated! Token:", authResp.Token)
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", authResp.Token))
-	// ctx, cancel := context.WithTimeout(ctx,  5 * time.Second)
-	// defer cancel()
 
 	for {
 		var reqType int
+		var shouldExit bool = false
 		fmt.Printf("Enter Request Type:")
 		fmt.Scanln(&reqType)
-		if(reqType > 2 || reqType < 1){
+		if(reqType > 3 || reqType < 1){
 			log.Println("Invalid reqType")
 		}
-		switch; reqType {
-			case 1:
-				payResp, err := client.GetBalance(ctx, &pb.GetBalanceRequest{Token: authResp.Token})
-				if err != common.ErrSuccess {
-					log.Printf("Request Failed: %v", err)
+		switch; RequestType(reqType) {
+			case balanceEnquiry:
+				currBalance, err := sendGetBalanceRequest(ctx, client, authResp.Token)
+				if !common.IsEqual(err, common.ErrSuccess) {
+					log.Printf("Request Failed: %v\n", err)
 				} else {
-					fmt.Printf("Current Balance is %f\n", payResp.Amount)
+					log.Printf("Current Balance is %f\n", currBalance)
 				}
 				
-			case 2:   // to do - check timeout for makepayment
+			case makePayment:   // to do - check timeout for makepayment
 				var recpAccNo, recpBankName string
 				var amount float32
 				fmt.Print("Enter recipitent Bank Name:")
@@ -103,14 +128,17 @@ func main() {
 				fmt.Scanln(&recpAccNo)
 				fmt.Print("Enter Amount:")
 				fmt.Scanln(&amount)
-				transID := uuid.New().String()
-				req := &pb.PaymentRequest{Token: authResp.Token, RecpBankName:recpBankName, RecpAccNo: recpAccNo, Amount: amount, TransID: transID}
-				payResp, err := client.MakePayment(ctx, req)
-				if err != common.ErrSuccess {
-					log.Printf("Payment failed: %v", err)
+				err = sendPaymentRequest(ctx, client, amount, recpAccNo, recpBankName, authResp.Token)
+				if !common.IsEqual(err, common.ErrSuccess) {
+					log.Printf("Payment failed: %v\n", err)
 				} else{
-					fmt.Println("Payment Status:", payResp.Status, "- Message:", payResp.Message)
+					log.Println("Payment Status: Success")
 				}
+			case exit:
+				shouldExit = true
+		}
+		if shouldExit {
+			break
 		}
 	}
 }

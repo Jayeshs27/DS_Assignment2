@@ -6,23 +6,44 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"os"
 	"log"
 	"net"
+	"os"
 	"strconv"
+	"sync"
+
 	// "time"
 
 	// "golang.org/x/crypto/bcrypt"
 	// "github.com/golang-jwt/jwt/v5"
+	common "q3/common"
+	pb "q3/protofiles"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	pb "q3/protofiles"
-	common "q3/common"
 )
 
 const (
 	paymentGatewayAddr = "localhost:45301"
 )
+
+
+type RequestType int
+ 
+var (
+	creditRequest RequestType = 0
+	debitRequest RequestType = 1
+)
+
+// PaymentServer struct
+type BankServer struct {
+	pb.UnimplementedBankServiceServer
+	Customers map[string]*Customer
+	DebitTransactions map[string]error
+	CreditTransactions map[string]error
+	bankName string
+	bankServerAddr string
+}
 
 var (
 	bSLogger *common.Logger
@@ -48,27 +69,50 @@ type Customer struct {
 	CustomerName   string `json:"customer_name"`
 	AccNo   string `json:"acc_no"`
 	CurrBalance       float32 `json:"curr_balance"`
+	AccountMutex      sync.Mutex `json:"-"`
+	isLocked           bool        `json:"-"`
 }
 
-func (c *Customer) SubtractAmount(amount float32){
+func (c *Customer) subtractAmount(amount float32){
 	c.CurrBalance -= amount
 }
 
-func (c *Customer) AddAmount(amount float32){
+func (c *Customer) addAmount(amount float32){
 	c.CurrBalance += amount
 }
-// PaymentServer struct
-type BankServer struct {
-	pb.UnimplementedBankServiceServer
-	Customers map[string]*Customer
-	DebitTransactions map[string]error
-	CreditTransactions map[string]error
-	bankName string
-	bankServerAddr string
+
+func (c *Customer) getBalance()(float32){
+	return c.CurrBalance
+}
+
+func (c *Customer) isAccountLocked()(bool){
+	c.AccountMutex.Lock()
+	defer c.AccountMutex.Unlock()
+	return c.isLocked
+}
+ 
+func (c *Customer) checkAndAcquire()(bool){
+	c.AccountMutex.Lock()
+	defer c.AccountMutex.Unlock()
+	lockVal := c.isLocked
+	c.isLocked = true
+	return lockVal
+}
+
+func (c *Customer) lockAccount(){
+	c.AccountMutex.Lock()
+	c.isLocked = true
+	c.AccountMutex.Unlock()
+}
+
+func (c *Customer) unLockAccount(){
+	c.AccountMutex.Lock()
+	c.isLocked = false
+	c.AccountMutex.Unlock()
 }
 
 func NewBankServer(bankName string)(*BankServer, error){
-	customers := loadUsers("sample_data/bank_customers.json")
+	customers := loadUsers("sample_data/bank_customers.json", bankName)
 	port, err := getAvaliablePort()
 	if err != common.ErrSuccess{
 		return &BankServer{}, err
@@ -82,17 +126,24 @@ func NewBankServer(bankName string)(*BankServer, error){
 	}, common.ErrSuccess
 }
 
-func loadUsers(filename string) map[string]*Customer {
+func loadUsers(filename string, bankName string) map[string]*Customer {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("Bank Server:Failed to read user file: %v", err)
+		log.Fatalf("Bank Server: Failed to read user file: %v", err)
 	}
-	var customers []*Customer
-	if err := json.Unmarshal(data, &customers); err != nil {
-		log.Fatalf("Bank Server:Failed to parse user data: %v", err)
+
+	var banks map[string][]*Customer
+	if err := json.Unmarshal(data, &banks); err != nil {
+		log.Fatalf("Bank Server: Failed to parse user data: %v", err)
 	}
+
 	customerMap := make(map[string]*Customer)
+	customers, exists := banks[bankName]
+	if !exists {
+		return customerMap
+	}
 	for _, customer := range customers {
+		customer.isLocked = false
 		customerMap[customer.AccNo] = customer
 	}
 	return customerMap

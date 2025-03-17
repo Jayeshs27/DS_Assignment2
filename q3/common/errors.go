@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"google.golang.org/grpc/status"
 )
 
 
@@ -16,4 +17,20 @@ var (
 	ErrBankServerAlreadyExist = errors.New("error: bank server already exists")
 	ErrInvalidUserName = errors.New("error: invalid user name")
 	ErrTransactionInProgress = errors.New("error: transaction in progress")
+	ErrInvalidAmount = errors.New("error: entered invalid amount")
+	ErrBankServerBusy = errors.New("error: server taking too long")
 )
+
+func IsEqual(err error, targetErr error) bool {
+	if err == targetErr {   // to handle the case with targetErr = nil (ErrSuccess)
+		return true
+	}
+	if targetErr == nil {  // if targetErr == nil, err != nil
+		return false
+	}
+    if errors.Is(err, targetErr) {
+        return true
+    }
+    s, ok := status.FromError(err)
+    return ok && (s.Message() == targetErr.Error())   
+}

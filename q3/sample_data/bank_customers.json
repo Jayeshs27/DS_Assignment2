@@ -1,9 +1,5 @@
-[
-    {
-      "customer_name": "charlie",
-      "acc_no": "123456",
-      "curr_balance": 500
-    },
+{
+  "bank1": [
     {
       "customer_name": "alice",
       "acc_no": "001122",
@@ -14,4 +10,12 @@
       "acc_no": "445566",
       "curr_balance": 4000
     }
-]
+  ],
+  "bank2": [
+    {
+      "customer_name": "charlie",
+      "acc_no": "123456",
+      "curr_balance": 500
+    }
+  ]
+}

@@ -20,10 +20,10 @@ func logger(format string, a ...any) {
 // AuthInterceptor is a gRPC interceptor for authentication and authorization
 func authInterceptor(
 	ctx context.Context,
-	req interface{},
+	req any,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
-) (interface{}, error) {
+) (any, error) {
 
 	if strings.Contains(info.FullMethod, "Authenticate") {
 		return handler(ctx, req)
@@ -44,7 +44,7 @@ func authInterceptor(
 	}
 
 	tokenString := authHeader[0]
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return []byte(jwtKey), common.ErrSuccess
 	})
 
