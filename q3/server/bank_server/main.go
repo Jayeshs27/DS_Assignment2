@@ -99,11 +99,11 @@ func (c *Customer) checkAndAcquire()(bool){
 	return lockVal
 }
 
-func (c *Customer) lockAccount(){
-	c.AccountMutex.Lock()
-	c.isLocked = true
-	c.AccountMutex.Unlock()
-}
+// func (c *Customer) lockAccount(){
+// 	c.AccountMutex.Lock()
+// 	c.isLocked = true
+// 	c.AccountMutex.Unlock()
+// }
 
 func (c *Customer) unLockAccount(){
 	c.AccountMutex.Lock()

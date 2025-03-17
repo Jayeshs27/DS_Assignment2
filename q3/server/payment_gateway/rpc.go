@@ -9,7 +9,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
-
 	// "google.golang.org/grpc"
 	// "google.golang.org/grpc/credentials"
 	common "q3/common"
@@ -20,6 +19,9 @@ type RequestType int
 var (
 	creditRequest RequestType = 0
 	debitRequest RequestType = 1
+)
+var (
+	timeoutInterval = 5
 )
 
 
@@ -45,22 +47,6 @@ func (s *PaymentServer) Authenticate(ctx context.Context, req *pb.UserCredential
 
 	return &pb.AuthResponse{Token: tokenString, Role: user.Role}, common.ErrSuccess
 }
-
-// func checkTokenValidity(reqToken string) (jwt.MapClaims, error){
-// 	token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
-// 		return jwtKey, nil
-// 	})
-// 	if err != nil || !token.Valid {
-// 		return  nil, common.ErrInvalidToken
-// 	}
-// 	claims, ok := token.Claims.(jwt.MapClaims)
-// 	if !ok {
-// 		return nil, common.ErrInvalidToken
-// 	} else if claims["role"] != "customer" {
-// 		return nil, common.ErrUnauthorized
-// 	}
-// 	return claims, common.ErrSuccess	
-// }
 
 func (s *PaymentServer) checkUserValidity(reqToken string)(User, error){
 	token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
@@ -122,29 +108,25 @@ func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	log.Printf("Received payment request %s, %s\n", user.BankName, req.RecpBankName)
-	// log.Println(s.BankServers)
 	ok, status := pgServer.checkAndUpdateTranscation(req.TransID)
 	if !ok {
 		return nil, status
 	}
 	err = s.sendPrepare(req, user)
+	pgServer.UpdateTransaction(req.TransID, err)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
 	err = s.sendCommit(req, user)
+	pgServer.UpdateTransaction(req.TransID, err)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	pgServer.UpdateTransaction(req.TransID, common.ErrSuccess)
 	return nil, common.ErrSuccess
 }
 
 func (s *PaymentServer) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error){
-	// claims, err := checkTokenValidity(req.Token)
-	// if !common.IsEqual(err, common.ErrSuccess) {
-	// 	return nil, err
-	// }
+	log.Printf("Sending check balance request...\n")
 	user, err := pgServer.checkUserValidity(req.Token)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
@@ -153,7 +135,6 @@ func (s *PaymentServer) GetBalance(ctx context.Context, req *pb.GetBalanceReques
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
 	}
-	log.Printf("Sending check balance request...\n")
 	currBalance, err := SendCheckBalanceRequest(bankAddr, user.AccountNo)
 	if !common.IsEqual(err, common.ErrSuccess){
 		return nil, err
@@ -181,12 +162,21 @@ func (s *PaymentServer) sendPrepareRequest(reqType RequestType, bankAddr string,
 	if !common.IsEqual(err, common.ErrSuccess){
 		return err
 	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutInterval) * time.Second)
+	defer cancel() 
+
 	client := pb.NewBankServiceClient(conn)
-	_, err = client.PrepareTransaction(context.Background(), &pb.PrepareRequest{ReqType: int32(reqType), AccNo: accNo, Amount: amount, TransID: txID})
+	_, err = client.PrepareTransaction(ctx, &pb.PrepareRequest{ReqType: int32(reqType), 
+														AccNo: accNo, Amount: amount, TransID: txID})
 	if !common.IsEqual(err, common.ErrSuccess) {
+		if common.IsEqual(ctx.Err(), context.DeadlineExceeded){
+			log.Println("Timeout: Bank", bankAddr, "did not respond in time")
+			return common.ErrTimeOut
+		}
 		return err
 	}
-	defer conn.Close()
 	return common.ErrSuccess
 }
 
@@ -197,11 +187,20 @@ func (s *PaymentServer) sendCommitRequest(reqType RequestType, bankAddr string, 
 	if !common.IsEqual(err, common.ErrSuccess){
 		return err
 	}
-	client := pb.NewBankServiceClient(conn)
 	defer conn.Close()
+
+	client := pb.NewBankServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutInterval) * time.Second)
+	defer cancel() 
+
 	_, err = client.CommitTransaction(context.Background(), &pb.CommitRequest{ReqType: int32(reqType), 
 														AccNo: accNo, Amount: amount, TransID: txID})
 	if !common.IsEqual(err, common.ErrSuccess) {
+		if common.IsEqual(ctx.Err(), context.DeadlineExceeded){
+			log.Println("Timeout: Bank", bankAddr, "did not respond in time")
+			return common.ErrTimeOut
+		}
 		return err
 	}
 	return common.ErrSuccess
@@ -214,10 +213,19 @@ func (s *PaymentServer) sendReleaseResourceRequest(bankAddr string, accNo string
 	if !common.IsEqual(err, common.ErrSuccess){
 		return err
 	}
-	client := pb.NewBankServiceClient(conn)
 	defer conn.Close()
+
+	client := pb.NewBankServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutInterval) * time.Second)
+	defer cancel() 
+
 	_, err = client.ReleaseResource(context.Background(), &pb.ReleaseRequest{AccNo: accNo})
 	if !common.IsEqual(err, common.ErrSuccess) {
+		if common.IsEqual(ctx.Err(), context.DeadlineExceeded){
+			log.Println("Timeout: Bank", bankAddr, "did not respond in time")
+			return common.ErrTimeOut
+		}
 		return err
 	}
 	return common.ErrSuccess

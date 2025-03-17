@@ -18,7 +18,8 @@ var (
 	ErrInvalidUserName = errors.New("error: invalid user name")
 	ErrTransactionInProgress = errors.New("error: transaction in progress")
 	ErrInvalidAmount = errors.New("error: entered invalid amount")
-	ErrBankServerBusy = errors.New("error: server taking too long")
+	ErrBankServerBusy = errors.New("error: server taking too long to response")
+	ErrTimeOut = errors.New("error: request timeout")
 )
 
 func IsEqual(err error, targetErr error) bool {

@@ -77,6 +77,7 @@ func (s *BankServer) PrepareTransaction(ctx context.Context, req *pb.PrepareRequ
 	if !common.IsEqual(err, common.ErrSuccess){
 		return nil, err
 	}
+	time.Sleep(5 * time.Second)
 	if !s.acquireAccountLock(req.AccNo) {   // check and acquires account lock
 		return nil, common.ErrBankServerBusy
 	}
@@ -113,7 +114,6 @@ func (s *BankServer) DebitBalance(ctx context.Context, req *pb.CommitRequest) (*
 	// 	return &pb.CommitResponse{}, status
 	// }
 	// bankServer.DebitTransactions[txId] = common.ErrTransactionInProgress
-	// time.Sleep(5 * time.Second)
 	s.Customers[req.AccNo].subtractAmount(req.Amount)
 	// bankServer.DebitTransactions[txId] = status
 	return &pb.CommitResponse{}, common.ErrSuccess
