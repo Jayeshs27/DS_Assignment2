@@ -2,6 +2,8 @@ package common
 
 import (
 	"errors"
+	// "q3/common"
+
 	"google.golang.org/grpc/status"
 )
 
@@ -21,6 +23,7 @@ var (
 	ErrBankServerBusy = errors.New("error: server taking too long to response")
 	ErrTimeOut = errors.New("error: request timeout")
 	ErrRequestQueued = errors.New("error: request timeout")
+	ErrSelfTransfer = errors.New("error: sender and receiver accounts can't be same")
 )
 
 func IsEqual(err error, targetErr error) bool {
@@ -35,4 +38,15 @@ func IsEqual(err error, targetErr error) bool {
     }
     s, ok := status.FromError(err)
     return ok && (s.Message() == targetErr.Error())   
+}
+
+func ErrorMessage(err error)(string){
+	if err == ErrSuccess {
+		return "Success"
+	}
+	s, ok := status.FromError(err)
+	if ok {
+		return s.Message()
+	}
+	return "Unknown Error"
 }

@@ -153,6 +153,7 @@ func SendRegisterRequest()(error){
 	// Connect to server
 	conn, err := grpc.NewClient(paymentGatewayAddr, 
 								grpc.WithTransportCredentials(credsAsClient),
+								grpc.WithUnaryInterceptor(pgRegisterInterceptor),
 							  	)
 	if err != common.ErrSuccess{
 		return err
@@ -175,19 +176,19 @@ func main() {
 	if len(args) < 1{
 		log.Fatalf("missing command line argument")
 	}
-	bankId, err1 := strconv.Atoi(args[0])
-	if err1 != nil {
+	bankId, err := strconv.Atoi(args[0])
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Invalid command line arguments")
 	}
 	bankName := fmt.Sprintf("bank%d",bankId)
 
 	cert, err := tls.LoadX509KeyPair("certs/bank_server.crt", "certs/bank_server.key")
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to load server certificates: %v", err)
 	}
 
 	caCert, err := os.ReadFile("certs/ca.crt")
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to read CA certificate: %v", err)
 	}
 
@@ -215,19 +216,19 @@ func main() {
 	)
 	
 	bankServer, err = NewBankServer(bankName)
-	if err != common.ErrSuccess {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to create bank server: %v", err)
 	}
 
 	pb.RegisterBankServiceServer(server, bankServer)
 
 	err = SendRegisterRequest()
-	if err != common.ErrSuccess {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to register with payment gateway: %v", err)
 	}
 
 	listener, err := net.Listen("tcp", bankServer.bankServerAddr)
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 

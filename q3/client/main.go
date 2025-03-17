@@ -11,6 +11,7 @@ import (
 	// "errors"
 	// "github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc/metadata"
+	// "google.golang.org/grpc/status"
 	// "golang.org/x/crypto/bcrypt"
 	pb "q3/protofiles"
 	common "q3/common"
@@ -69,12 +70,12 @@ func sendAutheticationRequest(ctx context.Context, client pb.PaymentServiceClien
 func main() {
 	// Load TLS credentials
 	cert, err := tls.LoadX509KeyPair("certs/client.crt", "certs/client.key")
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to load client certificates: %v", err)
 	}
 	
 	caCert, err := os.ReadFile("certs/ca.crt")
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to read CA certificate: %v", err)
 	}
 	certPool := x509.NewCertPool()
@@ -113,7 +114,7 @@ func main() {
 		authToken = token.(string)
 		// authToken, err = sendAutheticationRequest(context.Background(), client, username, password)
 		if !common.IsEqual(err, common.ErrSuccess){
-			log.Printf("Authentication failed: %v", err)
+			log.Printf("Authentication failed: %v", common.ErrorMessage(err))
 		} else {
 			break
 		}
@@ -140,7 +141,7 @@ func main() {
 				if common.IsEqual(err, common.ErrRequestQueued) {
 					log.Printf("Request Stored in the queue")
 				} else if !common.IsEqual(err, common.ErrSuccess) {
-					log.Printf("Payment failed: %v\n", err)
+					log.Printf("Payment failed: %v\n", common.ErrorMessage(err))
 				} else{
 					log.Printf("Currence balance : %f\n", resp.(float64))
 				}
@@ -161,7 +162,7 @@ func main() {
 				if common.IsEqual(err, common.ErrRequestQueued) {
 					log.Printf("Request Stored in the queue")
 				} else if !common.IsEqual(err, common.ErrSuccess) {
-					log.Printf("Payment failed: %v\n", err)
+					log.Printf("Payment failed: %v\n", common.ErrorMessage(err))
 				} else{
 					log.Println("Payment Status: Success")
 				}

@@ -48,7 +48,7 @@ func authInterceptor(
 		return []byte(jwtKey), common.ErrSuccess
 	})
 
-	if err != nil || !token.Valid {
+	if !common.IsEqual(err, common.ErrSuccess) || !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
 
@@ -85,15 +85,25 @@ func authInterceptor(
 	return handler(ctx, req)
 }
 
-func pgLoggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
+func pgClientLoggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
 	handler grpc.UnaryHandler) (any, error) {
 	
 	pgLogger.PrintLog("Method: %s, Request: %v", info.FullMethod, req)
     resp, err := handler(ctx, req)
-    if err != nil {
+    if !common.IsEqual(err, common.ErrSuccess) {
         logger("RPC failed with error: %v", err)
     }
 	pgLogger.PrintLog("Method: %s, Response: %v", info.FullMethod, resp)
 	
     return resp, err
+}
+
+func pgBankLoggingInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	pgLogger.PrintLog("Method: %s, Request: %v", method, req)
+	err := invoker(ctx, method, req, reply, cc, opts...)
+	if !common.IsEqual(err, common.ErrSuccess) {
+		pgLogger.PrintLog("Failedd to send the request, %v", err)
+	}
+	pgLogger.PrintLog("Method: %s, Response: %v, status: Success", method, reply)
+	return err
 }

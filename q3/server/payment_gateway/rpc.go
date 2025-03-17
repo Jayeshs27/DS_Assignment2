@@ -41,7 +41,7 @@ func (s *PaymentServer) Authenticate(ctx context.Context, req *pb.UserCredential
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, fmt.Errorf("could not generate token")
 	}
 
@@ -52,7 +52,7 @@ func (s *PaymentServer) checkUserValidity(reqToken string)(User, error){
 	token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
-	if err != nil || !token.Valid {
+	if !common.IsEqual(err, common.ErrSuccess) || !token.Valid {
 		panic(common.ErrInvalidToken)
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
@@ -80,7 +80,7 @@ func (s *PaymentServer) checkAndUpdateTranscation(txId string)(bool, error){
 	defer s.TransListmutex.Unlock()
 	status, exists := s.UserTransactions[txId] 
 	if exists {
-		if status == common.ErrTransactionInProgress || status  == common.ErrSuccess {
+		if common.IsEqual(status, common.ErrTransactionInProgress) || common.IsEqual(status, common.ErrSuccess) {
 			return false, status
 		}
 	}
@@ -92,6 +92,13 @@ func (s *PaymentServer) UpdateTransaction(txId string, status error){
 	s.TransListmutex.Lock()
 	s.UserTransactions[txId] = status
 	s.TransListmutex.Unlock()
+}
+
+func (s *PaymentServer) IsSelfTransfer(req *pb.PaymentRequest, user User)(bool){
+	if req.RecpBankName == user.BankName && req.RecpAccNo == user.AccountNo {
+		return true
+	}
+	return false
 }
 
 // Process payment
@@ -107,6 +114,9 @@ func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest)
 	_, err = pgServer.checkBankValidity(req.RecpBankName)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return nil, err
+	}
+	if s.IsSelfTransfer(req, user){
+		return nil, common.ErrSelfTransfer
 	}
 	ok, status := pgServer.checkAndUpdateTranscation(req.TransID)
 	if !ok {
@@ -157,8 +167,9 @@ func (s *PaymentServer) BankServerDiscovery(ctx context.Context, req *pb.Registe
 
 func (s *PaymentServer) sendPrepareRequest(reqType RequestType, bankAddr string, accNo string, amount float32, txID string)(error){
 	conn, err := grpc.NewClient(bankAddr, 
-		grpc.WithTransportCredentials(credsForBankServer),
-	)
+								grpc.WithTransportCredentials(credsForBankServer),
+								grpc.WithUnaryInterceptor(pgBankLoggingInterceptor),
+								)
 	if !common.IsEqual(err, common.ErrSuccess){
 		return err
 	}
@@ -183,6 +194,7 @@ func (s *PaymentServer) sendPrepareRequest(reqType RequestType, bankAddr string,
 func (s *PaymentServer) sendCommitRequest(reqType RequestType, bankAddr string, accNo string, amount float32, txID string)(error){
 	conn, err := grpc.NewClient(bankAddr, 
 								grpc.WithTransportCredentials(credsForBankServer),
+								grpc.WithUnaryInterceptor(pgBankLoggingInterceptor),
 							  	)
 	if !common.IsEqual(err, common.ErrSuccess){
 		return err
@@ -209,6 +221,7 @@ func (s *PaymentServer) sendCommitRequest(reqType RequestType, bankAddr string, 
 func (s *PaymentServer) sendReleaseResourceRequest(bankAddr string, accNo string)(error){
 	conn, err := grpc.NewClient(bankAddr, 
 								grpc.WithTransportCredentials(credsForBankServer),
+								grpc.WithUnaryInterceptor(pgBankLoggingInterceptor),
 							  	)
 	if !common.IsEqual(err, common.ErrSuccess){
 		return err
@@ -233,10 +246,12 @@ func (s *PaymentServer) sendReleaseResourceRequest(bankAddr string, accNo string
 
 func (s *PaymentServer) sendPrepare(req *pb.PaymentRequest, user User)(error){
 	log.Printf("Sending prepare transaction request...\n")
+
 	senderBankAddr := s.BankServers[user.BankName]
 	senderAccNo := user.AccountNo
 	recpAccNo, amount, txId:= req.RecpAccNo, req.Amount, req.TransID
 	recpBankAddr := s.BankServers[req.RecpBankName]
+
 	err := s.sendPrepareRequest(debitRequest, senderBankAddr, senderAccNo, amount, txId)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return err
@@ -251,10 +266,12 @@ func (s *PaymentServer) sendPrepare(req *pb.PaymentRequest, user User)(error){
 
 func (s *PaymentServer) sendCommit(req *pb.PaymentRequest, user User)(error){
 	log.Printf("Sending commit transaction request...\n")
+
 	senderBankAddr := s.BankServers[user.BankName]
 	senderAccNo := user.AccountNo
 	recpAccNo, amount, txId:= req.RecpAccNo, req.Amount, req.TransID
 	recpBankAddr := s.BankServers[req.RecpBankName]
+	
 	err := s.sendCommitRequest(debitRequest, senderBankAddr, senderAccNo, amount, txId)
 	if !common.IsEqual(err, common.ErrSuccess) {
 		return err

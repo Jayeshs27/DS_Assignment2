@@ -21,11 +21,11 @@ var (
 func ClientRequestInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
     timeout := time.Duration(timeoutInterval) * time.Second 
     var err error
-    for i := range maxRetries {
+    for i := 0 ; i < maxLoginAttempts; i++ {
         retryCtx, cancel := context.WithTimeout(ctx, timeout)
         defer cancel() 
 
-        clientLogger.PrintLog("Attempt %d - Request: %v", i+1, req)
+        clientLogger.PrintLog("Attempt %d - Method: %s, Request: %v", i+1, method, req)
         err = invoker(retryCtx, method, req, reply, cc, opts...)
 
         if errors.Is(err, common.ErrSuccess) {
@@ -38,9 +38,8 @@ func ClientRequestInterceptor(ctx context.Context, method string, req, reply any
 			if common.IsEqual(retryCtx.Err(), context.DeadlineExceeded) || common.IsEqual(err, common.ErrTransactionInProgress){
 				return common.ErrTimeOut
 			}
-			
 		}
-		
+
         if common.IsEqual(retryCtx.Err(), context.DeadlineExceeded) || common.IsEqual(err, common.ErrTransactionInProgress) {
 			clientLogger.PrintLog("Request Timeout (Attempt %d): Server taking too long | Retrying ..", i+1)
 		} else {

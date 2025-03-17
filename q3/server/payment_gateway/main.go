@@ -129,12 +129,12 @@ func SendCheckBalanceRequest(bankAddr string, accNo string)(float32, error){
 
 func main() {
 	cert, err := tls.LoadX509KeyPair("certs/payment_gateway.crt", "certs/payment_gateway.key")
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to load server certificates: %v", err)
 	}
 
 	caCert, err := os.ReadFile("certs/ca.crt")
-	if err != nil {
+	if !common.IsEqual(err, common.ErrSuccess) {
 		log.Fatalf("Failed to read CA certificate: %v", err)
 	}
 
@@ -158,7 +158,7 @@ func main() {
 	
 	server := grpc.NewServer(
 		grpc.Creds(credsForClient),
-		grpc.ChainUnaryInterceptor(pgLoggingInterceptor, authInterceptor),
+		grpc.ChainUnaryInterceptor(pgClientLoggingInterceptor, authInterceptor),
 	)
 	pgServer, err = NewPaymentServer()
 	if !common.IsEqual(err, common.ErrSuccess) {
@@ -175,104 +175,3 @@ func main() {
 	server.Serve(listener)
 }
 
-
-// func sendRequestToLoadBalancer(client lbproto.LoadBalancingServiceClient, tasktype int) (string, error){
-// 	req := &lbproto.LoadBalancerRequest{TaskType: int32(tasktype)}
-
-// 	resp, err := client.LoadBalancerRPC(context.Background(), req)
-// 	if err != nil {
-// 		log.Fatalf("Error while calling LoadBalancerRPC: %v", err)
-// 		return "", err
-// 	}
-
-// 	fmt.Println("Response From Load Balancing Server: ", resp.GetBestServer())
-// 	return resp.GetBestServer(), nil
-// }
-
-// Process payment
-// func (s *PaymentServer) MakePayment(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
-// 	// Validate JWT token
-// 	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-// 		return jwtKey, nil
-// 	})
-
-// 	if err != nil || !token.Valid {
-// 		return nil, common.ErrInvalidToken
-// 	}
-
-// 	claims, ok := token.Claims.(jwt.MapClaims)
-// 	if !ok {
-// 		return nil, common.ErrInvalidToken
-// 	}else if claims["role"] != "customer" {
-// 		return nil, common.ErrUnauthorized
-// 	}
-
-// 	userName := claims["username"].(string)
-// 	user := s.users[userName]  // assuming user always exists with give userName
-// 	_, amount := req.RespAccNo, req.Amount
-// 	err = SendDebitRequest(user.AccountNo, amount)
-// 	if err != common.ErrSuccess{
-// 		return nil, err
-// 	}
-
-// 	return &pb.PaymentResponse{
-// 		Status:  "success",
-// 		Message: "Payment processed successfully",
-// 	}, common.ErrSuccess
-// // }
-
-// func (s *PaymentServer) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error){
-
-// 	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-// 		return jwtKey, nil
-// 	})
-
-// 	if err != nil || !token.Valid {
-// 		return nil, common.ErrInvalidToken
-// 	}
-
-// 	claims, ok := token.Claims.(jwt.MapClaims)
-// 	if !ok {
-// 		return nil, common.ErrInvalidToken
-// 	}
-// 	userName := claims["username"].(string)
-// 	user := s.users[userName]  // assuming user always exists with give userName
-// 	currBalance, err := SendCheckBalanceRequest(user.AccountNo)
-// 	if err != common.ErrSuccess{
-// 		return nil, err
-// 	}
-// 	fmt.Printf("Current Balance is %f\n", currBalance)
-
-// 	return &pb.GetBalanceResponse{Amount: currBalance}, common.ErrSuccess
-// }
-
-// func (s *PaymentServer) BankServerDiscovery(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error){
-// 	bankId, bankAddr := req.BankId, req.BankServerAddr
-// 	if err != common.ErrSuccess{
-// 		return nil, err
-// 	}
-// 	fmt.Printf("Current Balance is %f\n", currBalance)
-
-// 	return &pb.GetBalanceResponse{Amount: currBalance}, common.ErrSuccess
-// }
-
-// func (s *PaymentServer) CheckBalance(ctx context.Context, req *pb.PaymentRequest) (*pb.PaymentResponse, error) {
-// 	// Validate JWT token
-// 	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-// 		return jwtKey, nil
-// 	})
-
-// 	if err != nil || !token.Valid {
-// 		return nil, common.ErrInvalidToken
-// 	}
-
-// 	claims, ok := token.Claims.(jwt.MapClaims)
-// 	if !ok || claims["role"] != "customer" {
-// 		return nil, common.ErrUnauthorized
-// 	}
-
-// 	return &pb.PaymentResponse{
-// 		Status:  "success",
-// 		Message: "Payment processed successfully",
-// 	}, common.ErrSuccess
-// }
